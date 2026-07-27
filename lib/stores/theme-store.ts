@@ -1,20 +1,31 @@
-/** @type {const} */
-const themeColors = {
-  primary: { light: '#D4AF37', dark: '#D4AF37' },
-  background: { light: '#050505', dark: '#050505' },
-  surface: { light: '#1a1a1a', dark: '#1a1a1a' },
-  foreground: { light: '#FFFFFF', dark: '#FFFFFF' },
-  muted: { light: '#999999', dark: '#999999' },
-  border: { light: '#D4AF37', dark: '#D4AF37' },
-  success: { light: '#22C55E', dark: '#4ADE80' },
-  warning: { light: '#F59E0B', dark: '#FBBF24' },
-  error: { light: '#EF4444', dark: '#F87171' },
-};
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-module.exports = { themeColors };
+export type ThemeType = 'hadx-cyber-luxury' | 'bento-telemetry' | 'visionos-spatial' | 'cyberpunk-terminal' | 'neumorphic-luxe';
 
-// Theme configurations for dynamic theme engine
-const themeConfigs = {
+export interface ThemeConfig {
+  name: string;
+  colors: {
+    primary: string;
+    background: string;
+    surface: string;
+    foreground: string;
+    muted: string;
+    border: string;
+    accent: string;
+  };
+  glassBlur: number;
+  borderGlow: boolean;
+}
+
+interface ThemeStore {
+  currentTheme: ThemeType;
+  setTheme: (theme: ThemeType) => void;
+  getThemeConfig: (theme: ThemeType) => ThemeConfig;
+}
+
+const themeConfigs: Record<ThemeType, ThemeConfig> = {
   'hadx-cyber-luxury': {
     name: 'HADX Cyber-Luxury',
     colors: {
@@ -87,4 +98,16 @@ const themeConfigs = {
   },
 };
 
-module.exports.themeConfigs = themeConfigs;
+export const useThemeStore = create<ThemeStore>()(
+  persist(
+    (set) => ({
+      currentTheme: 'hadx-cyber-luxury',
+      setTheme: (theme: ThemeType) => set({ currentTheme: theme }),
+      getThemeConfig: (theme: ThemeType) => themeConfigs[theme],
+    }),
+    {
+      name: 'theme-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);

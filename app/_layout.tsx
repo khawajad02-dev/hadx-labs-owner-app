@@ -18,6 +18,8 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+import * as SecureStore from 'expo-secure-store';
+import { useRouter } from 'expo-router';
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -32,11 +34,33 @@ export default function RootLayout() {
 
   const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
   const [frame, setFrame] = useState<Rect>(initialFrame);
+  const [isSecured, setIsSecured] = useState<boolean | null>(null);
+  const router = useRouter();
 
   // Initialize Manus runtime for cookie injection from parent container
   useEffect(() => {
     initManusRuntime();
   }, []);
+
+  // Check if security key exists on app launch
+  useEffect(() => {
+    const checkSecurityKey = async () => {
+      try {
+        const key = await SecureStore.getItemAsync('x-admin-secret');
+        if (key) {
+          setIsSecured(true);
+        } else {
+          setIsSecured(false);
+          router.replace('/security-vault');
+        }
+      } catch (error) {
+        console.error('Error checking security key:', error);
+        setIsSecured(false);
+        router.replace('/security-vault');
+      }
+    };
+    checkSecurityKey();
+  }, [router]);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
     setInsets(metrics.insets);
@@ -88,12 +112,24 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="oauth/callback" />
+            <Stack.Screen name="security-vault" />
           </Stack>
           <StatusBar style="auto" />
         </QueryClientProvider>
       </trpc.Provider>
     </GestureHandlerRootView>
   );
+
+  // Show loading until security check is complete
+  if (isSecured === null) {
+    return (
+      <ThemeProvider>
+        <SafeAreaProvider initialMetrics={providerInitialMetrics}>
+          <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#050505' }} />
+        </SafeAreaProvider>
+      </ThemeProvider>
+    );
+  }
 
   const shouldOverrideSafeArea = Platform.OS === "web";
 
