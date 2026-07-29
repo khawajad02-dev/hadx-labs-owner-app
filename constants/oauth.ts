@@ -1,11 +1,11 @@
 import * as Linking from "expo-linking";
 import * as ReactNative from "react-native";
 
-// Extract scheme from bundle ID (last segment timestamp, prefixed with "manus")
-// e.g., "space.manus.my.app.t20240115103045" -> "manus20240115103045"
+// Extract scheme from bundle ID (last segment timestamp, prefixed with "hadx")
+// e.g., "com.app.hadxlabsownerapp.t20240115103045" -> "hadx20240115103045"
 const bundleId = "com.app.hadxlabsownerapp";
 const timestamp = bundleId.split(".").pop()?.replace(/^t/, "") ?? "";
-const schemeFromBundleId = `manus${timestamp}`;
+const schemeFromBundleId = `hadx${timestamp}`;
 
 const env = {
   portal: process.env.EXPO_PUBLIC_OAUTH_PORTAL_URL ?? "",
@@ -50,7 +50,7 @@ export function getApiBaseUrl(): string {
 }
 
 export const SESSION_TOKEN_KEY = "app_session_token";
-export const USER_INFO_KEY = "manus-runtime-user-info";
+export const USER_INFO_KEY = "hadx-runtime-user-info";
 
 const encodeState = (value: string) => {
   if (typeof globalThis.btoa === "function") {

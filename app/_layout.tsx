@@ -17,7 +17,7 @@ import {
 import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 
 import { trpc, createTRPCClient } from "@/lib/trpc";
-import { initManusRuntime, subscribeSafeAreaInsets } from "@/lib/_core/manus-runtime";
+import { initHadxRuntime, subscribeSafeAreaInsets } from "@/lib/_core/hadx-runtime";
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 
@@ -37,9 +37,9 @@ export default function RootLayout() {
   const [isSecured, setIsSecured] = useState<boolean | null>(null);
   const router = useRouter();
 
-  // Initialize Manus runtime for cookie injection from parent container
+  // Initialize HADX runtime for communication with parent container
   useEffect(() => {
-    initManusRuntime();
+    initHadxRuntime();
   }, []);
 
   // Check if security key exists on app launch
