@@ -166,7 +166,7 @@ export default function ProductsScreen() {
               <TouchableOpacity
                 style={{ backgroundColor: colors.primary }}
                 className="rounded-lg px-4 py-2"
-                onPress={() => Alert.alert('Add Product', 'Product form would open here')}
+                onPress={() => router.push('/add-product')}
               >
                 <Text className="font-semibold" style={{ color: colors.background }}>
                   + Add

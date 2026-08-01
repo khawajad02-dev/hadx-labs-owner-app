@@ -1,20 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, RefreshControl, Alert, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, FlatList, RefreshControl, Alert, Linking } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { apiGet, apiPut } from '@/lib/api-client';
 import { useColors } from '@/hooks/use-colors';
 
 interface Order {
   id: string;
-  orderNumber: string;
-  customerName: string;
-  customerEmail: string;
-  customerPhone: string;
-  total: number;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  orderReference: string;
+  fullName: string;
+  email: string;
+  phone: string;
   address: string;
-  paymentMethod: string;
-  trackingNumber?: string;
+  productTitle: string;
+  quantity: number;
+  totalAmountInCents: number;
+  paymentStatus: string;
+  orderStatus: string;
   createdAt: string;
 }
 
@@ -29,7 +30,8 @@ export default function OrdersScreen() {
     try {
       setError('');
       const response = await apiGet('/orders');
-      setOrders(response.data || []);
+      // The API returns the array directly
+      setOrders(Array.isArray(response.data) ? response.data : []);
     } catch (err: any) {
       console.error('Error fetching orders:', err);
       setError('Failed to load orders');
@@ -51,8 +53,9 @@ export default function OrdersScreen() {
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      await apiPut(`/orders/${orderId}`, { status: newStatus });
-      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus as any } : o));
+      // Note: We need to implement this endpoint in the storefront if not already there
+      await apiPut(`/orders/${orderId}`, { orderStatus: newStatus });
+      setOrders(orders.map(o => o.id === orderId ? { ...o, orderStatus: newStatus } : o));
       Alert.alert('Success', `Order status updated to ${newStatus}`);
     } catch (err) {
       Alert.alert('Error', 'Failed to update order status');
@@ -60,26 +63,20 @@ export default function OrdersScreen() {
   };
 
   const handleWhatsApp = (phone: string, customerName: string) => {
-    const message = `Hi ${customerName}, this is an update about your order.`;
+    if (!phone) return Alert.alert('Error', 'No phone number available');
+    const message = `Hi ${customerName}, this is an update about your order from HADX LABS.`;
     const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
     Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open WhatsApp'));
   };
 
-  const handleCall = (phone: string) => {
-    Linking.openURL(`tel:${phone}`).catch(() => Alert.alert('Error', 'Could not initiate call'));
-  };
-
-  const handleEmail = (email: string) => {
-    Linking.openURL(`mailto:${email}`).catch(() => Alert.alert('Error', 'Could not open email'));
-  };
-
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return '#F59E0B';
-      case 'processing': return '#3B82F6';
-      case 'shipped': return '#8B5CF6';
-      case 'delivered': return '#22C55E';
-      case 'cancelled': return '#EF4444';
+    switch (status.toUpperCase()) {
+      case 'RESERVED': return '#F59E0B';
+      case 'CONFIRMED': return '#3B82F6';
+      case 'SHIPPED': return '#8B5CF6';
+      case 'DELIVERED': return '#22C55E';
+      case 'CANCELLED': return '#EF4444';
+      case 'EXPIRED': return '#71717A';
       default: return colors.muted;
     }
   };
@@ -96,18 +93,18 @@ export default function OrdersScreen() {
       <View className="flex-row justify-between items-start mb-2">
         <View className="flex-1">
           <Text className="text-lg font-bold" style={{ color: colors.foreground }}>
-            #{order.orderNumber}
+            {order.orderReference}
           </Text>
           <Text style={{ color: colors.muted }} className="text-sm">
-            {order.customerName}
+            {order.fullName}
           </Text>
         </View>
         <View
           className="rounded px-3 py-1"
-          style={{ backgroundColor: getStatusColor(order.status) }}
+          style={{ backgroundColor: getStatusColor(order.orderStatus) }}
         >
           <Text className="text-xs font-bold text-white capitalize">
-            {order.status}
+            {order.orderStatus}
           </Text>
         </View>
       </View>
@@ -115,30 +112,28 @@ export default function OrdersScreen() {
       <View className="gap-2 mb-3">
         <View className="flex-row justify-between">
           <Text style={{ color: colors.muted }} className="text-sm">
+            Product
+          </Text>
+          <Text style={{ color: colors.foreground }} className="text-sm font-medium">
+            {order.productTitle} (x{order.quantity})
+          </Text>
+        </View>
+        <View className="flex-row justify-between">
+          <Text style={{ color: colors.muted }} className="text-sm">
             Total
           </Text>
           <Text className="font-bold" style={{ color: colors.primary }}>
-            ${order.total}
+            ${(order.totalAmountInCents / 100).toFixed(2)}
           </Text>
         </View>
         <View className="flex-row justify-between">
           <Text style={{ color: colors.muted }} className="text-sm">
             Address
           </Text>
-          <Text style={{ color: colors.foreground }} className="text-sm flex-1 text-right">
+          <Text style={{ color: colors.foreground }} className="text-sm flex-1 text-right" numberOfLines={2}>
             {order.address}
           </Text>
         </View>
-        {order.trackingNumber && (
-          <View className="flex-row justify-between">
-            <Text style={{ color: colors.muted }} className="text-sm">
-              Tracking
-            </Text>
-            <Text style={{ color: colors.foreground }} className="text-sm">
-              {order.trackingNumber}
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Action Buttons */}
@@ -147,19 +142,19 @@ export default function OrdersScreen() {
           <TouchableOpacity
             className="flex-1 rounded py-2 items-center"
             style={{ backgroundColor: colors.primary }}
-            onPress={() => updateOrderStatus(order.id, 'shipped')}
+            onPress={() => updateOrderStatus(order.id, 'CONFIRMED')}
           >
             <Text className="font-semibold text-xs" style={{ color: colors.background }}>
-              📦 Fulfill
+              Confirm
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="flex-1 rounded py-2 items-center"
-            style={{ backgroundColor: colors.primary, opacity: 0.7 }}
-            onPress={() => updateOrderStatus(order.id, 'delivered')}
+            style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 1, borderColor: '#EF4444' }}
+            onPress={() => updateOrderStatus(order.id, 'CANCELLED')}
           >
-            <Text className="font-semibold text-xs" style={{ color: colors.background }}>
-              ✓ Deliver
+            <Text className="font-semibold text-xs" style={{ color: '#FCA5A5' }}>
+              Cancel
             </Text>
           </TouchableOpacity>
         </View>
@@ -169,23 +164,16 @@ export default function OrdersScreen() {
           <TouchableOpacity
             className="flex-1 rounded py-2 items-center"
             style={{ backgroundColor: '#25D366' }}
-            onPress={() => handleWhatsApp(order.customerPhone, order.customerName)}
+            onPress={() => handleWhatsApp(order.phone, order.fullName)}
           >
-            <Text className="font-semibold text-xs text-white">💬 WhatsApp</Text>
+            <Text className="font-semibold text-xs text-white">WhatsApp</Text>
           </TouchableOpacity>
           <TouchableOpacity
             className="flex-1 rounded py-2 items-center"
             style={{ backgroundColor: '#0066CC' }}
-            onPress={() => handleCall(order.customerPhone)}
+            onPress={() => Linking.openURL(`tel:${order.phone}`)}
           >
-            <Text className="font-semibold text-xs text-white">📞 Call</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-1 rounded py-2 items-center"
-            style={{ backgroundColor: '#EA4335' }}
-            onPress={() => handleEmail(order.customerEmail)}
-          >
-            <Text className="font-semibold text-xs text-white">✉️ Email</Text>
+            <Text className="font-semibold text-xs text-white">Call</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -204,10 +192,10 @@ export default function OrdersScreen() {
           <View className="gap-4 mb-4">
             <View>
               <Text className="text-3xl font-bold" style={{ color: colors.foreground }}>
-                Orders
+                Live Orders
               </Text>
               <Text style={{ color: colors.muted }}>
-                {orders.length} orders
+                {orders.length} orders found
               </Text>
             </View>
 

@@ -1,0 +1,105 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PaymentMethod {
+  COD
+  CARD
+}
+
+enum PaymentStatus {
+  UNPAID_COD
+  PENDING_PAYMENT
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum OrderStatus {
+  RESERVED
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+}
+
+enum Currency {
+  USD
+  PKR
+  EUR
+}
+
+model Product {
+  id              String          @id @default(uuid())
+  sku             String          @unique
+  title           String
+  description     String?
+  priceInCents    Int
+  currency        Currency        @default(USD)
+  imageUrl        String?
+  category        String?
+  stockQuantity   Int
+  holds           InventoryHold[]
+  orders          Order[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model Order {
+  id                  String          @id
+  orderReference      String          @unique
+  fullName            String
+  email               String
+  phone               String
+  address             String
+  productId           String?
+  product             Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productSku          String
+  productTitle        String
+  unitPriceInCents    Int
+  quantity            Int
+  totalAmountInCents  Int
+  currency            Currency        @default(USD)
+  paymentMethod       PaymentMethod
+  paymentStatus       PaymentStatus   @default(PENDING_PAYMENT)
+  orderStatus         OrderStatus     @default(RESERVED)
+  stripeIntent        String?         @unique
+  expiresAt           DateTime
+  confirmedAt         DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  holds               InventoryHold[]
+
+  @@index([paymentStatus])
+  @@index([orderStatus])
+  @@index([createdAt])
+  @@index([stripeIntent])
+}
+
+model InventoryHold {
+  id        String   @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  expiresAt DateTime
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, productId])
+  @@index([expiresAt])
+  @@index([productId])
+  @@index([orderId])
+}
+
+model StripeEvent {
+  id        String   @id
+  type      String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

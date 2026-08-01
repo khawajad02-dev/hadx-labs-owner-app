@@ -113,6 +113,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="oauth/callback" />
             <Stack.Screen name="security-vault" />
+            <Stack.Screen name="add-product" options={{ presentation: 'modal' }} />
           </Stack>
           <StatusBar style="auto" />
         </QueryClientProvider>
