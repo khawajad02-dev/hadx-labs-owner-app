@@ -19,7 +19,7 @@ export default function AddProductScreen() {
     stockQuantity: '10',
   });
 
-  const handleSave = async () => {
+  const handleSave = async (status: 'DRAFT' | 'PUBLISHED') => {
     if (!form.title || !form.sku || !form.price) {
       Alert.alert('Error', 'Title, SKU, and Price are required');
       return;
@@ -29,10 +29,11 @@ export default function AddProductScreen() {
     try {
       await apiPost('/products', {
         ...form,
+        status,
         price: parseFloat(form.price),
         stockQuantity: parseInt(form.stockQuantity, 10),
       });
-      Alert.alert('Success', 'Product created successfully');
+      Alert.alert('Success', `Product ${status === 'PUBLISHED' ? 'published' : 'saved as draft'} successfully`);
       router.back();
     } catch (error: any) {
       console.error('Save product error:', error);
@@ -123,20 +124,41 @@ export default function AddProductScreen() {
           multiline
         />
 
-        <TouchableOpacity
-          className="rounded-xl p-4 items-center mt-4"
-          style={{ backgroundColor: colors.primary, opacity: loading ? 0.7 : 1 }}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.background} />
-          ) : (
-            <Text className="font-bold text-lg" style={{ color: colors.background }}>
-              Save Product
+        <View className="flex-row gap-4 mt-6">
+          <TouchableOpacity
+            className="flex-1 rounded-xl p-4 items-center"
+            style={{ 
+              backgroundColor: colors.surface, 
+              borderWidth: 1, 
+              borderColor: colors.border,
+              opacity: loading ? 0.7 : 1 
+            }}
+            onPress={() => handleSave('DRAFT')}
+            disabled={loading}
+          >
+            <Text className="font-bold" style={{ color: colors.foreground }}>
+              Save Draft
             </Text>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="flex-1 rounded-xl p-4 items-center"
+            style={{ 
+              backgroundColor: colors.primary,
+              opacity: loading ? 0.7 : 1 
+            }}
+            onPress={() => handleSave('PUBLISHED')}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={colors.background} />
+            ) : (
+              <Text className="font-bold" style={{ color: colors.background }}>
+                Publish Live
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </ScreenContainer>
   );

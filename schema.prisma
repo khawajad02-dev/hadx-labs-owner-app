@@ -33,6 +33,11 @@ enum Currency {
   EUR
 }
 
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+}
+
 model Product {
   id              String          @id @default(uuid())
   sku             String          @unique
@@ -42,6 +47,7 @@ model Product {
   currency        Currency        @default(USD)
   imageUrl        String?
   category        String?
+  status          ProductStatus   @default(DRAFT)
   stockQuantity   Int
   holds           InventoryHold[]
   orders          Order[]
