@@ -19,7 +19,10 @@ import type { EdgeInsets, Metrics, Rect } from "react-native-safe-area-context";
 import { trpc, createTRPCClient } from "@/lib/trpc";
 import { initHadxRuntime, subscribeSafeAreaInsets } from "@/lib/_core/hadx-runtime";
 import * as SecureStore from 'expo-secure-store';
+import * as SplashScreen from 'expo-splash-screen';
 import { useRouter } from 'expo-router';
+
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
@@ -42,11 +45,17 @@ export default function RootLayout() {
     initHadxRuntime();
   }, []);
 
-  // Check if security key exists on app launch
+  // Check if security key exists on app launch, but never leave the native splash
+  // waiting forever if secure storage is unavailable or slow on a fresh install.
   useEffect(() => {
+    let active = true;
     const checkSecurityKey = async () => {
       try {
-        const key = await SecureStore.getItemAsync('x-admin-secret');
+        const key = await Promise.race([
+          SecureStore.getItemAsync('x-admin-secret'),
+          new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 4000)),
+        ]);
+        if (!active) return;
         if (key) {
           setIsSecured(true);
         } else {
@@ -55,11 +64,20 @@ export default function RootLayout() {
         }
       } catch (error) {
         console.error('Error checking security key:', error);
-        setIsSecured(false);
-        router.replace('/security-vault');
+        if (active) {
+          setIsSecured(false);
+          router.replace('/security-vault');
+        }
+      } finally {
+        if (active) {
+          await SplashScreen.hideAsync().catch(() => undefined);
+        }
       }
     };
     checkSecurityKey();
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
