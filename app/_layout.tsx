@@ -15,6 +15,7 @@ import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { OWNER_SESSION_KEY } from "@/constants/owner-api";
+import { LuxuryScene } from "@/components/luxury-ui";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -102,7 +103,8 @@ export default function RootLayout() {
   }, [initialInsets, initialFrame]);
 
   const content = (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <LuxuryScene>
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <Stack initialRouteName="security-vault" screenOptions={{ headerShown: false }}>
@@ -110,11 +112,13 @@ export default function RootLayout() {
             <Stack.Screen name="oauth/callback" />
             <Stack.Screen name="security-vault" />
             <Stack.Screen name="add-product" options={{ presentation: "modal" }} />
+            <Stack.Screen name="edit-product" options={{ presentation: "modal" }} />
           </Stack>
-          <StatusBar style="auto" />
+          <StatusBar style="light" />
         </QueryClientProvider>
       </trpc.Provider>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </LuxuryScene>
   );
 
   // Keep Expo Router mounted from the first render. A blank root view here can

@@ -1,8 +1,20 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, FlatList, RefreshControl, Alert, Linking } from 'react-native';
-import { ScreenContainer } from '@/components/screen-container';
-import { apiGet, apiPut } from '@/lib/api-client';
-import { useColors } from '@/hooks/use-colors';
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Linking,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+
+import { ScreenContainer } from "@/components/screen-container";
+import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/components/luxury-ui";
+import { useColors } from "@/hooks/use-colors";
+import { apiGet, apiPut } from "@/lib/api-client";
 
 interface Order {
   id: string;
@@ -14,170 +26,148 @@ interface Order {
   productTitle: string;
   quantity: number;
   totalAmountInCents: number;
+  currency?: string;
   paymentStatus: string;
   orderStatus: string;
   createdAt: string;
+  product?: { id: string; title: string; imageUrl?: string | null; sku?: string } | null;
+}
+
+interface OrderResponse {
+  items: Order[];
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+  nextCursor?: string | null;
+}
+
+const PAGE_SIZE = 25;
+const FILTERS = ["ALL", "RESERVED", "CONFIRMED", "CANCELLED"] as const;
+type OrderFilter = (typeof FILTERS)[number];
+
+function normalizeResponse(data: OrderResponse | Order[]): OrderResponse {
+  if (Array.isArray(data)) return { items: data, total: data.length, page: 1, pageSize: data.length || PAGE_SIZE, hasMore: false };
+  return data;
+}
+
+function formatAmount(order: Order) {
+  const value = order.totalAmountInCents / 100;
+  return `${order.currency === "PKR" ? "PKR " : order.currency === "EUR" ? "€" : "$"}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function toneForStatus(status: string): "success" | "warning" | "danger" | "neutral" {
+  const normalized = status.toUpperCase();
+  if (normalized === "CONFIRMED" || normalized === "DELIVERED") return "success";
+  if (normalized === "RESERVED" || normalized === "PENDING_PAYMENT") return "warning";
+  if (normalized === "CANCELLED" || normalized === "EXPIRED" || normalized === "FAILED") return "danger";
+  return "neutral";
 }
 
 export default function OrdersScreen() {
   const colors = useColors();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [total, setTotal] = useState(0);
+  const [filter, setFilter] = useState<OrderFilter>("ALL");
+  const [query, setQuery] = useState("");
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async (append: boolean, cursor?: string | null) => {
+    if (append) setLoadingMore(true);
+    else if (!refreshing) setLoading(true);
+
     try {
-      setError('');
-      const response = await apiGet('/orders');
-      // The API returns the array directly
-      setOrders(Array.isArray(response.data) ? response.data : []);
-    } catch (err: any) {
-      console.error('Error fetching orders:', err);
-      setError('Failed to load orders');
-      setOrders([]);
+      setError("");
+      const params = new URLSearchParams({ pageSize: String(PAGE_SIZE) });
+      if (query.trim()) params.set("q", query.trim());
+      if (filter !== "ALL") params.set("status", filter);
+      if (cursor) params.set("cursor", cursor);
+      const response = await apiGet(`/orders?${params.toString()}`);
+      const parsed = normalizeResponse(response.data);
+      setOrders((previous) => (append ? [...previous, ...parsed.items] : parsed.items));
+      setTotal(parsed.total);
+      setNextCursor(parsed.nextCursor || null);
+      setHasMore(parsed.hasMore);
+    } catch (requestError: any) {
+      console.error("Error fetching orders:", requestError);
+      setError(requestError?.response?.data?.error || "The order queue could not be loaded.");
+      if (!append) setOrders([]);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
-  };
+  }, [filter, query, refreshing]);
 
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    const timer = setTimeout(() => void fetchOrders(false), 220);
+    return () => clearTimeout(timer);
+  }, [fetchOrders]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchOrders();
+    void fetchOrders(false);
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    const previous = orders;
+    setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, orderStatus: newStatus } : order)));
     try {
-      // Note: We need to implement this endpoint in the storefront if not already there
       await apiPut(`/orders/${orderId}`, { orderStatus: newStatus });
-      setOrders(orders.map(o => o.id === orderId ? { ...o, orderStatus: newStatus } : o));
-      Alert.alert('Success', `Order status updated to ${newStatus}`);
-    } catch (err) {
-      Alert.alert('Error', 'Failed to update order status');
+    } catch (requestError: any) {
+      setOrders(previous);
+      Alert.alert("Could not update order", requestError?.response?.data?.error || "Try again when the connection is restored.");
     }
   };
 
-  const handleWhatsApp = (phone: string, customerName: string) => {
-    if (!phone) return Alert.alert('Error', 'No phone number available');
-    const message = `Hi ${customerName}, this is an update about your order from HADX LABS.`;
-    const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
-    Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open WhatsApp'));
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
-      case 'RESERVED': return '#F59E0B';
-      case 'CONFIRMED': return '#3B82F6';
-      case 'SHIPPED': return '#8B5CF6';
-      case 'DELIVERED': return '#22C55E';
-      case 'CANCELLED': return '#EF4444';
-      case 'EXPIRED': return '#71717A';
-      default: return colors.muted;
+  const contactWhatsApp = (order: Order) => {
+    if (!order.phone) {
+      Alert.alert("No phone number", "This order has no customer phone number.");
+      return;
     }
+    const message = `Hi ${order.fullName}, this is an update about your HADX LABS order ${order.orderReference}.`;
+    const url = `https://wa.me/${order.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+    Linking.openURL(url).catch(() => Alert.alert("Could not open WhatsApp", "Please check that WhatsApp is installed."));
   };
 
-  const OrderCard = ({ order }: { order: Order }) => (
-    <View
-      className="rounded-lg p-4 mb-3"
-      style={{
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.border,
-      }}
-    >
-      <View className="flex-row justify-between items-start mb-2">
-        <View className="flex-1">
-          <Text className="text-lg font-bold" style={{ color: colors.foreground }}>
-            {order.orderReference}
-          </Text>
-          <Text style={{ color: colors.muted }} className="text-sm">
-            {order.fullName}
-          </Text>
+  const renderOrder = ({ item }: { item: Order }) => (
+    <LuxuryCard compact style={styles.orderCard}>
+      <View style={styles.orderHeader}>
+        <View style={styles.orderCopy}>
+          <Text style={[styles.orderReference, { color: colors.foreground }]}>{item.orderReference}</Text>
+          <Text style={[styles.customerName, { color: colors.muted }]}>{item.fullName}</Text>
         </View>
-        <View
-          className="rounded px-3 py-1"
-          style={{ backgroundColor: getStatusColor(order.orderStatus) }}
-        >
-          <Text className="text-xs font-bold text-white capitalize">
-            {order.orderStatus}
-          </Text>
+        <StatusPill label={item.orderStatus} tone={toneForStatus(item.orderStatus)} />
+      </View>
+      <View style={styles.orderBody}>
+        <View style={styles.detailRow}>
+          <Text style={[styles.detailLabel, { color: colors.muted }]}>Piece</Text>
+          <Text style={[styles.detailValue, { color: colors.foreground }]} numberOfLines={1}>{item.productTitle} × {item.quantity}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={[styles.detailLabel, { color: colors.muted }]}>Value</Text>
+          <Text style={[styles.amount, { color: colors.primary }]}>{formatAmount(item)}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={[styles.detailLabel, { color: colors.muted }]}>Payment</Text>
+          <StatusPill label={item.paymentStatus.replaceAll("_", " ")} tone={toneForStatus(item.paymentStatus)} />
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={[styles.detailLabel, { color: colors.muted }]}>Placed</Text>
+          <Text style={[styles.detailValue, { color: colors.foreground }]}>{new Date(item.createdAt).toLocaleDateString()}</Text>
         </View>
       </View>
-
-      <View className="gap-2 mb-3">
-        <View className="flex-row justify-between">
-          <Text style={{ color: colors.muted }} className="text-sm">
-            Product
-          </Text>
-          <Text style={{ color: colors.foreground }} className="text-sm font-medium">
-            {order.productTitle} (x{order.quantity})
-          </Text>
-        </View>
-        <View className="flex-row justify-between">
-          <Text style={{ color: colors.muted }} className="text-sm">
-            Total
-          </Text>
-          <Text className="font-bold" style={{ color: colors.primary }}>
-            ${(order.totalAmountInCents / 100).toFixed(2)}
-          </Text>
-        </View>
-        <View className="flex-row justify-between">
-          <Text style={{ color: colors.muted }} className="text-sm">
-            Address
-          </Text>
-          <Text style={{ color: colors.foreground }} className="text-sm flex-1 text-right" numberOfLines={2}>
-            {order.address}
-          </Text>
-        </View>
+      <View style={styles.actionRow}>
+        {item.orderStatus === "RESERVED" ? <LuxuryButton label="Confirm" onPress={() => void updateOrderStatus(item.id, "CONFIRMED")} variant="primary" style={styles.actionButton} /> : null}
+        {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item.id, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
+        <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" style={styles.actionButton} />
       </View>
-
-      {/* Action Buttons */}
-      <View className="gap-2 mb-3">
-        <View className="flex-row gap-2">
-          <TouchableOpacity
-            className="flex-1 rounded py-2 items-center"
-            style={{ backgroundColor: colors.primary }}
-            onPress={() => updateOrderStatus(order.id, 'CONFIRMED')}
-          >
-            <Text className="font-semibold text-xs" style={{ color: colors.background }}>
-              Confirm
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-1 rounded py-2 items-center"
-            style={{ backgroundColor: 'rgba(239, 68, 68, 0.2)', borderWidth: 1, borderColor: '#EF4444' }}
-            onPress={() => updateOrderStatus(order.id, 'CANCELLED')}
-          >
-            <Text className="font-semibold text-xs" style={{ color: '#FCA5A5' }}>
-              Cancel
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Contact Buttons */}
-        <View className="flex-row gap-2">
-          <TouchableOpacity
-            className="flex-1 rounded py-2 items-center"
-            style={{ backgroundColor: '#25D366' }}
-            onPress={() => handleWhatsApp(order.phone, order.fullName)}
-          >
-            <Text className="font-semibold text-xs text-white">WhatsApp</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="flex-1 rounded py-2 items-center"
-            style={{ backgroundColor: '#0066CC' }}
-            onPress={() => Linking.openURL(`tel:${order.phone}`)}
-          >
-            <Text className="font-semibold text-xs text-white">Call</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
+    </LuxuryCard>
   );
 
   return (
@@ -185,44 +175,90 @@ export default function OrdersScreen() {
       <FlatList
         data={orders}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <OrderCard order={item} />}
-        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        renderItem={renderOrder}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+        onEndReached={() => {
+          if (hasMore && nextCursor && !loadingMore) void fetchOrders(true, nextCursor);
+        }}
+        onEndReachedThreshold={0.3}
         ListHeaderComponent={
-          <View className="gap-4 mb-4">
-            <View>
-              <Text className="text-3xl font-bold" style={{ color: colors.foreground }}>
-                Live Orders
-              </Text>
-              <Text style={{ color: colors.muted }}>
-                {orders.length} orders found
-              </Text>
+          <View style={styles.headerContent}>
+            <SectionHeading eyebrow="OPERATIONS / ORDER QUEUE" title="Orders" detail={`${total.toLocaleString("en-US")} orders across every status`} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search order, customer, email or product"
+              placeholderTextColor={`${colors.muted}B3`}
+              returnKeyType="search"
+              style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
+            />
+            <View style={styles.filterRow}>
+              {FILTERS.map((item) => (
+                <LuxuryButton
+                  key={item}
+                  label={item === "ALL" ? "All" : item.charAt(0) + item.slice(1).toLowerCase()}
+                  onPress={() => setFilter(item)}
+                  variant={filter === item ? "primary" : "ghost"}
+                  style={styles.filterButton}
+                  labelStyle={styles.filterLabel}
+                />
+              ))}
             </View>
-
             {error ? (
-              <View
-                className="rounded-lg p-4"
-                style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', borderWidth: 1, borderColor: '#EF4444' }}
-              >
-                <Text style={{ color: '#FCA5A5' }}>{error}</Text>
-              </View>
+              <LuxuryCard compact style={styles.errorCard}>
+                <Text style={[styles.errorTitle, { color: colors.foreground }]}>Order feed paused</Text>
+                <Text style={[styles.errorText, { color: colors.muted }]}>{error}</Text>
+                <LuxuryButton label="Retry" onPress={() => void fetchOrders(false)} variant="ghost" style={styles.retryButton} />
+              </LuxuryCard>
             ) : null}
           </View>
         }
         ListEmptyComponent={
           loading ? (
-            <View className="flex-1 items-center justify-center py-12">
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
+            <View style={styles.emptyState}><ActivityIndicator size="large" color={colors.primary} /><Text style={[styles.emptyText, { color: colors.muted }]}>Opening secure order queue…</Text></View>
           ) : (
-            <View className="items-center justify-center py-12">
-              <Text style={{ color: colors.muted }} className="text-center">
-                No orders available
-              </Text>
-            </View>
+            <LuxuryCard accent style={styles.emptyCard}>
+              <Text style={[styles.emptyMark, { color: colors.primary }]}>⌁</Text>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No orders match this view.</Text>
+              <Text style={[styles.emptyText, { color: colors.muted }]}>Try another status or search phrase. The queue is designed to keep loading as it grows.</Text>
+            </LuxuryCard>
           )
         }
+        ListFooterComponent={loadingMore ? <View style={styles.footerLoading}><ActivityIndicator size="small" color={colors.primary} /><Text style={[styles.emptyText, { color: colors.muted }]}>Loading the next page…</Text></View> : null}
       />
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { padding: 20, paddingBottom: 120, gap: 12 },
+  headerContent: { gap: 14, marginBottom: 4 },
+  searchInput: { borderWidth: 1, borderRadius: 15, minHeight: 50, paddingHorizontal: 15, fontSize: 13 },
+  filterRow: { flexDirection: "row", gap: 6 },
+  filterButton: { flex: 1, minHeight: 40, paddingHorizontal: 5 },
+  filterLabel: { fontSize: 10 },
+  orderCard: { gap: 14 },
+  orderHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 },
+  orderCopy: { flex: 1, gap: 4 },
+  orderReference: { fontSize: 16, fontWeight: "900" },
+  customerName: { fontSize: 12 },
+  orderBody: { gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "#FFFFFF12", paddingVertical: 12 },
+  detailRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  detailLabel: { fontSize: 11, fontWeight: "700" },
+  detailValue: { flex: 1, textAlign: "right", fontSize: 12, fontWeight: "700" },
+  amount: { fontSize: 15, fontWeight: "900" },
+  actionRow: { flexDirection: "row", gap: 7 },
+  actionButton: { flex: 1, minHeight: 40, paddingHorizontal: 5 },
+  errorCard: { borderColor: "#633A36" },
+  errorTitle: { fontSize: 14, fontWeight: "900", marginBottom: 5 },
+  errorText: { fontSize: 12, lineHeight: 18, marginBottom: 12 },
+  retryButton: { alignSelf: "flex-start", minHeight: 40 },
+  emptyState: { alignItems: "center", justifyContent: "center", paddingVertical: 48, gap: 10 },
+  emptyCard: { alignItems: "center", paddingVertical: 28 },
+  emptyMark: { fontSize: 40, fontWeight: "900", marginBottom: 8 },
+  emptyTitle: { textAlign: "center", fontSize: 18, fontWeight: "900", lineHeight: 24 },
+  emptyText: { textAlign: "center", fontSize: 12, lineHeight: 18 },
+  footerLoading: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 18 },
+});

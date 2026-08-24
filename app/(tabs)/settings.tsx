@@ -1,277 +1,197 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, Switch, ActivityIndicator } from 'react-native';
-import { ScreenContainer } from '@/components/screen-container';
-import { useColors } from '@/hooks/use-colors';
-import { useThemeStore, type ThemeType } from '@/lib/stores/theme-store';
-import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { apiPut } from '@/lib/api-client';
-import { OWNER_SESSION_KEY } from '@/constants/owner-api';
+import { useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useRouter } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 
-const THEME_OPTIONS: Array<{ id: ThemeType; name: string; description: string }> = [
-  {
-    id: 'hadx-cyber-luxury',
-    name: 'HADX Cyber-Luxury',
-    description: 'Deep black with luxury gold accents',
-  },
-  {
-    id: 'bento-telemetry',
-    name: 'Bento Grid Telemetry',
-    description: 'Obsidian matte with cyan accents',
-  },
-  {
-    id: 'visionos-spatial',
-    name: 'VisionOS Spatial',
-    description: 'Frosted glass with ambient blue',
-  },
-  {
-    id: 'cyberpunk-terminal',
-    name: 'Cyberpunk Terminal',
-    description: 'Monospace green and gold',
-  },
-  {
-    id: 'neumorphic-luxe',
-    name: 'Neumorphic Dark Luxe',
-    description: 'Soft shadows with gold accents',
-  },
-];
+import { ScreenContainer } from "@/components/screen-container";
+import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/components/luxury-ui";
+import { useColors } from "@/hooks/use-colors";
+import { OWNER_SESSION_KEY } from "@/constants/owner-api";
+import { THEME_CONFIGS, useThemeStore, type ThemeType } from "@/lib/stores/theme-store";
+import { Linking } from "react-native";
+
+const THEME_OPTIONS = Object.entries(THEME_CONFIGS).map(([id, config]) => ({
+  id: id as ThemeType,
+  ...config,
+}));
+
+function PresetPreview({ themeId, selected }: { themeId: ThemeType; selected: boolean }) {
+  const config = THEME_CONFIGS[themeId];
+  return (
+    <View style={[styles.preview, { backgroundColor: config.colors.background, borderColor: selected ? config.colors.primary : config.colors.border }]}>
+      <View style={[styles.previewGlow, { backgroundColor: config.colors.primary, opacity: config.motion.glowOpacity * 0.22 }]} />
+      <View style={[styles.previewCore, { backgroundColor: config.colors.primary, shadowColor: config.colors.primary }]}>
+        <View style={[styles.previewCoreHighlight, { backgroundColor: config.colors.accent }]} />
+      </View>
+      <View style={[styles.previewRing, { borderColor: config.colors.accent }]} />
+      {config.motion.scanline ? <View style={[styles.scanline, { backgroundColor: config.colors.accent }]} /> : null}
+    </View>
+  );
+}
 
 export default function SettingsScreen() {
   const colors = useColors();
   const router = useRouter();
   const { currentTheme, setTheme } = useThemeStore();
-  const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
-
-  const handleThemeChange = (themeId: ThemeType) => {
-    setTheme(themeId);
-  };
-
-  const handleMaintenanceToggle = async (value: boolean) => {
-    setMaintenanceLoading(true);
+  const openStorefront = async () => {
     try {
-      await apiPut('/maintenance', { enabled: value });
-      setMaintenanceMode(value);
-      Alert.alert(
-        'Success',
-        `Maintenance mode ${value ? 'enabled' : 'disabled'}`
-      );
-    } catch (err) {
-      Alert.alert('Error', 'Failed to update maintenance mode');
-    } finally {
-      setMaintenanceLoading(false);
+      await Linking.openURL("https://hadx-labs.vercel.app");
+    } catch (error) {
+      console.error("Storefront open failed:", error);
+      Alert.alert("Could not open storefront", "Please try again when the connection is restored.");
     }
   };
 
   const handleResetSession = () => {
-    Alert.alert(
-      'Reset owner session',
-      'Are you sure? You will need to request a new email sign-in code on next launch.',
-      [
-        { text: 'Cancel', onPress: () => {} },
-        {
-          text: 'Reset',
-          onPress: async () => {
-            try {
-              await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
-              Alert.alert('Success', 'Owner session has been reset');
-              router.replace('/security-vault');
-            } catch (err) {
-              Alert.alert('Error', 'Failed to reset owner session');
-            }
-          },
-          style: 'destructive',
+    Alert.alert("Reset owner session", "You will need a new email sign-in code on next launch.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Reset session",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
+            router.replace("/security-vault");
+          } catch (error) {
+            console.error("Reset session failed:", error);
+            Alert.alert("Could not reset session", "Please try again.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', onPress: () => {} },
-        {
-          text: 'Logout',
-          onPress: async () => {
-            try {
-              await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
-              router.replace('/security-vault');
-            } catch (err) {
-              Alert.alert('Error', 'Failed to logout');
-            }
-          },
-          style: 'destructive',
+    Alert.alert("Log out of Owner App", "Your server session will be removed from this device.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log out",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
+            router.replace("/security-vault");
+          } catch (error) {
+            console.error("Logout failed:", error);
+            Alert.alert("Could not log out", "Please try again.");
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
     <ScreenContainer containerClassName="flex-1" className="flex-1">
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-        <View className="p-4 gap-6 pb-20">
-          {/* Header */}
-          <View className="gap-2">
-            <Text className="text-3xl font-bold" style={{ color: colors.foreground }}>
-              Settings
-            </Text>
-            <Text style={{ color: colors.muted }}>
-              App Configuration
-            </Text>
-          </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <SectionHeading
+          eyebrow="CONTROL ROOM / PREFERENCES"
+          title="Settings"
+          detail="Shape the mood, motion and operating state of HADX LABS."
+        />
 
-          {/* Theme Section */}
-          <View className="gap-3">
-            <Text className="text-lg font-semibold" style={{ color: colors.foreground }}>
-              🎨 Theme
-            </Text>
-            <View className="gap-2">
-              {THEME_OPTIONS.map((theme) => (
-                <TouchableOpacity
-                  key={theme.id}
-                  onPress={() => handleThemeChange(theme.id)}
-                  style={{
-                    backgroundColor: colors.surface,
-                    borderWidth: 2,
-                    borderColor: currentTheme === theme.id ? colors.primary : colors.border,
-                    paddingHorizontal: 16,
-                    paddingVertical: 12,
-                    borderRadius: 8,
-                  }}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-1">
-                      <Text className="font-semibold" style={{ color: colors.foreground }}>
-                        {theme.name}
-                      </Text>
-                      <Text className="text-xs mt-1" style={{ color: colors.muted }}>
-                        {theme.description}
-                      </Text>
+        <LuxuryCard accent style={styles.currentCard}>
+          <View style={styles.currentRow}>
+            <View style={styles.currentCopy}>
+              <Text style={[styles.eyebrow, { color: colors.primary }]}>ACTIVE EXPERIENCE</Text>
+              <Text style={[styles.currentTitle, { color: colors.foreground }]}>{colors.themeName}</Text>
+              <Text style={[styles.currentDetail, { color: colors.muted }]}>{colors.themeDescription}</Text>
+            </View>
+            <StatusPill label="Live" tone="success" />
+          </View>
+        </LuxuryCard>
+
+        <SectionHeading eyebrow="MOTION LAB" title="3D animation presets" detail="Each preset changes the palette, depth and movement of the whole app." />
+        <View style={styles.presetList}>
+          {THEME_OPTIONS.map((theme) => {
+            const selected = currentTheme === theme.id;
+            return (
+              <Pressable
+                key={theme.id}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                onPress={() => setTheme(theme.id)}
+                style={({ pressed }) => [styles.presetPressable, pressed && styles.presetPressed]}
+              >
+                <View style={[styles.presetCard, { backgroundColor: colors.surface, borderColor: selected ? colors.primary : colors.border }]}>
+                  <PresetPreview themeId={theme.id} selected={selected} />
+                  <View style={styles.presetCopy}>
+                    <View style={styles.presetTitleRow}>
+                      <Text style={[styles.presetName, { color: colors.foreground }]}>{theme.name}</Text>
+                      {selected ? <Text style={[styles.check, { color: colors.primary }]}>✓</Text> : null}
                     </View>
-                    {currentTheme === theme.id && (
-                      <Text className="text-lg" style={{ color: colors.primary }}>
-                        ✓
-                      </Text>
-                    )}
+                    <Text style={[styles.presetDescription, { color: colors.muted }]}>{theme.description}</Text>
+                    <Text style={[styles.presetMeta, { color: selected ? colors.primary : colors.muted }]}>
+                      {theme.motion.scanline ? "SCANLINE / TELEMETRY" : "ATMOSPHERIC / DEPTH"}
+                    </Text>
                   </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Store Control Section */}
-          <View
-            className="rounded-lg p-4 gap-4"
-            style={{
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text className="text-lg font-semibold" style={{ color: colors.foreground }}>
-              🏪 Store Control
-            </Text>
-
-            <View className="flex-row justify-between items-center">
-              <View className="flex-1">
-                <Text style={{ color: colors.foreground }} className="font-semibold">
-                  Maintenance Mode
-                </Text>
-                <Text style={{ color: colors.muted }} className="text-sm mt-1">
-                  Temporarily disable the store
-                </Text>
-              </View>
-              <Switch
-                value={maintenanceMode}
-                onValueChange={handleMaintenanceToggle}
-                disabled={maintenanceLoading}
-              />
-            </View>
-          </View>
-
-          {/* Security Section */}
-          <View className="gap-3">
-            <Text className="text-lg font-semibold" style={{ color: colors.foreground }}>
-              🔐 Security
-            </Text>
-
-            <TouchableOpacity
-              onPress={handleResetSession}
-              style={{
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.border,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderRadius: 8,
-              }}
-            >
-              <Text style={{ color: colors.foreground }} className="font-semibold">
-                Reset owner session
-              </Text>
-              <Text style={{ color: colors.muted }} className="text-sm mt-1">
-                You will need a new email sign-in code on next launch
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                borderWidth: 1,
-                borderColor: '#EF4444',
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderRadius: 8,
-              }}
-            >
-              <Text style={{ color: '#FCA5A5' }} className="font-semibold">
-                🚪 Logout
-              </Text>
-              <Text style={{ color: '#FCA5A5' }} className="text-sm mt-1 opacity-75">
-                Sign out from this device
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* App Info Section */}
-          <View
-            className="rounded-lg p-4"
-            style={{
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text className="text-lg font-semibold mb-3" style={{ color: colors.foreground }}>
-              ℹ️ App Information
-            </Text>
-
-            <View className="gap-2">
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.muted }}>App Name</Text>
-                <Text style={{ color: colors.foreground }} className="font-semibold">
-                  HADX LABS Owner
-                </Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.muted }}>Version</Text>
-                <Text style={{ color: colors.foreground }} className="font-semibold">
-                  1.0.0
-                </Text>
-              </View>
-              <View className="flex-row justify-between">
-                <Text style={{ color: colors.muted }}>Current Theme</Text>
-                <Text style={{ color: colors.primary }} className="font-semibold">
-                  {THEME_OPTIONS.find(t => t.id === currentTheme)?.name}
-                </Text>
-              </View>
-            </View>
-          </View>
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
+
+        <SectionHeading eyebrow="STORE PRESENCE" title="Operating state" detail="Controls that affect the public storefront." />
+        <LuxuryCard compact>
+          <View style={styles.controlCopy}>
+            <Text style={[styles.controlTitle, { color: colors.foreground }]}>Public storefront</Text>
+            <Text style={[styles.controlDetail, { color: colors.muted }]}>Open the live HADX LABS experience in your browser.</Text>
+          </View>
+          <LuxuryButton label="Open live storefront" onPress={() => void openStorefront()} variant="primary" style={styles.storeButton} />
+        </LuxuryCard>
+
+        <SectionHeading eyebrow="DEVICE SECURITY" title="Session controls" detail="Your server secret never lives in this app." />
+        <View style={styles.securityActions}>
+          <LuxuryButton label="Request a new sign-in" onPress={handleResetSession} variant="secondary" />
+          <LuxuryButton label="Log out this device" onPress={handleLogout} variant="danger" />
+        </View>
+
+        <LuxuryCard compact>
+          <Text style={[styles.infoEyebrow, { color: colors.primary }]}>HADX LABS OWNER</Text>
+          <Text style={[styles.infoTitle, { color: colors.foreground }]}>Luxury control, without the clutter.</Text>
+          <Text style={[styles.infoDetail, { color: colors.muted }]}>Version 1.1 · {colors.themeName}</Text>
+        </LuxuryCard>
       </ScrollView>
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  content: { padding: 20, paddingBottom: 120, gap: 18 },
+  eyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 2.4 },
+  currentCard: { minHeight: 130 },
+  currentRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
+  currentCopy: { flex: 1, gap: 6 },
+  currentTitle: { fontSize: 21, fontWeight: "900" },
+  currentDetail: { fontSize: 13, lineHeight: 19 },
+  presetList: { gap: 10 },
+  presetPressable: { borderRadius: 20 },
+  presetPressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
+  presetCard: { minHeight: 112, borderRadius: 20, borderWidth: 1, padding: 12, flexDirection: "row", alignItems: "center", gap: 14 },
+  preview: { width: 84, height: 84, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+  previewGlow: { position: "absolute", width: 74, height: 74, borderRadius: 37 },
+  previewCore: { width: 34, height: 34, borderRadius: 17, alignItems: "flex-start", justifyContent: "flex-start", shadowOpacity: 0.7, shadowRadius: 12, elevation: 7 },
+  previewCoreHighlight: { width: 9, height: 9, borderRadius: 5, marginTop: 6, marginLeft: 7, opacity: 0.85 },
+  previewRing: { position: "absolute", width: 62, height: 62, borderRadius: 31, borderWidth: 1, opacity: 0.5 },
+  scanline: { position: "absolute", height: 1, width: 64, top: 41, opacity: 0.55 },
+  presetCopy: { flex: 1, gap: 6 },
+  presetTitleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 },
+  presetName: { flex: 1, fontSize: 15, fontWeight: "900" },
+  check: { fontSize: 20, fontWeight: "900" },
+  presetDescription: { fontSize: 12, lineHeight: 17 },
+  presetMeta: { fontSize: 9, fontWeight: "800", letterSpacing: 1.2 },
+  storeButton: { marginTop: 14 },
+  controlCopy: { flex: 1, gap: 5 },
+  controlTitle: { fontSize: 15, fontWeight: "800" },
+  controlDetail: { fontSize: 12, lineHeight: 18 },
+  securityActions: { gap: 10 },
+  infoEyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 2.2, marginBottom: 8 },
+  infoTitle: { fontSize: 17, fontWeight: "900", marginBottom: 5 },
+  infoDetail: { fontSize: 12 },
+});

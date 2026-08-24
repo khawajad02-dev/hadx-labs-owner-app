@@ -61,6 +61,16 @@ export const apiPost = async (url: string, data?: unknown, config?: AxiosRequest
   return client.post(url, data, config);
 };
 
+export const apiUpload = async (url: string, data: unknown) => {
+  const client = await createApiClient();
+  return client.post(url, data, {
+    timeout: 120000,
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
 export const apiPut = async (url: string, data?: unknown, config?: AxiosRequestConfig) => {
   const client = await createApiClient();
   return client.put(url, data, config);
