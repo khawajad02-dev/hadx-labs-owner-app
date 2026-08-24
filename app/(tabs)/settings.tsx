@@ -6,6 +6,7 @@ import { useThemeStore, type ThemeType } from '@/lib/stores/theme-store';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { apiPut } from '@/lib/api-client';
+import { OWNER_SESSION_KEY } from '@/constants/owner-api';
 
 const THEME_OPTIONS: Array<{ id: ThemeType; name: string; description: string }> = [
   {
@@ -62,21 +63,21 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleResetKey = () => {
+  const handleResetSession = () => {
     Alert.alert(
-      'Reset Master Key',
-      'Are you sure? You will need to re-enter your Master Key on next launch.',
+      'Reset owner session',
+      'Are you sure? You will need to request a new email sign-in code on next launch.',
       [
         { text: 'Cancel', onPress: () => {} },
         {
           text: 'Reset',
           onPress: async () => {
             try {
-              await SecureStore.deleteItemAsync('x-admin-secret');
-              Alert.alert('Success', 'Master Key has been reset');
+              await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
+              Alert.alert('Success', 'Owner session has been reset');
               router.replace('/security-vault');
             } catch (err) {
-              Alert.alert('Error', 'Failed to reset Master Key');
+              Alert.alert('Error', 'Failed to reset owner session');
             }
           },
           style: 'destructive',
@@ -95,7 +96,7 @@ export default function SettingsScreen() {
           text: 'Logout',
           onPress: async () => {
             try {
-              await SecureStore.deleteItemAsync('x-admin-secret');
+              await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
               router.replace('/security-vault');
             } catch (err) {
               Alert.alert('Error', 'Failed to logout');
@@ -197,7 +198,7 @@ export default function SettingsScreen() {
             </Text>
 
             <TouchableOpacity
-              onPress={handleResetKey}
+              onPress={handleResetSession}
               style={{
                 backgroundColor: colors.surface,
                 borderWidth: 1,
@@ -208,10 +209,10 @@ export default function SettingsScreen() {
               }}
             >
               <Text style={{ color: colors.foreground }} className="font-semibold">
-                Reset Master Key
+                Reset owner session
               </Text>
               <Text style={{ color: colors.muted }} className="text-sm mt-1">
-                You will need to re-enter your key on next launch
+                You will need a new email sign-in code on next launch
               </Text>
             </TouchableOpacity>
 

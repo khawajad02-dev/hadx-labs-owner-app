@@ -14,6 +14,7 @@ import { initHadxRuntime, subscribeSafeAreaInsets } from "@/lib/_core/hadx-runti
 import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import { ThemeProvider } from "@/lib/theme-provider";
+import { OWNER_SESSION_KEY } from "@/constants/owner-api";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -39,16 +40,16 @@ export default function RootLayout() {
   // Resolve secure storage, but never leave the native splash waiting forever.
   useEffect(() => {
     let active = true;
-    const checkSecurityKey = async () => {
+    const checkOwnerSession = async () => {
       try {
         const key = await Promise.race([
-          SecureStore.getItemAsync("x-admin-secret"),
+          SecureStore.getItemAsync(OWNER_SESSION_KEY),
           new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 4000)),
         ]);
         if (!active) return;
         router.replace(key ? "/(tabs)" : "/security-vault");
       } catch (error) {
-        console.error("Error checking security key:", error);
+        console.error("Error checking owner session:", error);
         if (active) {
           router.replace("/security-vault");
         }
@@ -58,7 +59,7 @@ export default function RootLayout() {
         }
       }
     };
-    checkSecurityKey();
+    checkOwnerSession();
     return () => {
       active = false;
     };

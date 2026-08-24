@@ -1,7 +1,7 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
+import * as SecureStore from "expo-secure-store";
 
-const API_BASE_URL = 'https://hadx-labs-xeo7.vercel.app/api/admin';
+import { OWNER_ADMIN_BASE_URL, OWNER_SESSION_KEY } from "@/constants/owner-api";
 
 let apiClient: AxiosInstance | null = null;
 
@@ -10,39 +10,35 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
     return apiClient;
   }
 
-  // Get the stored secret key
-  const secretKey = await SecureStore.getItemAsync('x-admin-secret');
+  const sessionToken = await SecureStore.getItemAsync(OWNER_SESSION_KEY);
 
   apiClient = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: OWNER_ADMIN_BASE_URL,
     timeout: 15000,
     headers: {
-      'Content-Type': 'application/json',
-      ...(secretKey && { 'x-admin-secret': secretKey }),
+      "Content-Type": "application/json",
+      ...(sessionToken && { Authorization: `Bearer ${sessionToken}` }),
     },
   });
 
-  // Add request interceptor to inject the secret key
   apiClient.interceptors.request.use(
     async (config) => {
-      const key = await SecureStore.getItemAsync('x-admin-secret');
-      if (key) {
-        config.headers['x-admin-secret'] = key;
+      const token = await SecureStore.getItemAsync(OWNER_SESSION_KEY);
+      if (token) {
+        config.headers = config.headers ?? {};
+        config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
     },
-    (error) => {
-      return Promise.reject(error);
-    }
+    (error) => Promise.reject(error),
   );
 
-  // Add response interceptor for error handling
   apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
-      console.error('API Error:', error.response?.status, error.response?.data);
+      console.error("Owner API error:", error.response?.status, error.response?.data);
       return Promise.reject(error);
-    }
+    },
   );
 
   return apiClient;
@@ -50,23 +46,22 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
 
 export const getApiClient = (): AxiosInstance => {
   if (!apiClient) {
-    throw new Error('API client not initialized. Call createApiClient first.');
+    throw new Error("API client not initialized. Call createApiClient first.");
   }
   return apiClient;
 };
 
-// Helper functions for common API operations
 export const apiGet = async (url: string, config?: AxiosRequestConfig) => {
   const client = await createApiClient();
   return client.get(url, config);
 };
 
-export const apiPost = async (url: string, data?: any, config?: AxiosRequestConfig) => {
+export const apiPost = async (url: string, data?: unknown, config?: AxiosRequestConfig) => {
   const client = await createApiClient();
   return client.post(url, data, config);
 };
 
-export const apiPut = async (url: string, data?: any, config?: AxiosRequestConfig) => {
+export const apiPut = async (url: string, data?: unknown, config?: AxiosRequestConfig) => {
   const client = await createApiClient();
   return client.put(url, data, config);
 };
@@ -76,7 +71,7 @@ export const apiDelete = async (url: string, config?: AxiosRequestConfig) => {
   return client.delete(url, config);
 };
 
-export const apiPatch = async (url: string, data?: any, config?: AxiosRequestConfig) => {
+export const apiPatch = async (url: string, data?: unknown, config?: AxiosRequestConfig) => {
   const client = await createApiClient();
   return client.patch(url, data, config);
 };
