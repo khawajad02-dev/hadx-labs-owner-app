@@ -1,6 +1,7 @@
 import { useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Pressable,
@@ -18,185 +19,117 @@ import { useColors } from "@/hooks/use-colors";
 import { apiPost } from "@/lib/api-client";
 import { uploadPickedMedia, type PickedMedia } from "@/lib/media-upload";
 
+type SelectedMedia = PickedMedia & { id: string };
+
+function makeSku(title: string) {
+  const slug = title.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 16) || "PIECE";
+  return `HADX-${slug}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
+
 export default function AddProductScreen() {
   const colors = useColors();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [media, setMedia] = useState<PickedMedia | null>(null);
-  const [form, setForm] = useState({
-    title: "",
-    sku: "",
-    price: "",
-    description: "",
-    category: "",
-    stockQuantity: "10",
-  });
+  const [uploadProgress, setUploadProgress] = useState("");
+  const [media, setMedia] = useState<SelectedMedia[]>([]);
+  const [form, setForm] = useState({ title: "", sku: "", usdPrice: "", pkrPrice: "", inrPrice: "", description: "", category: "", stockQuantity: "10" });
 
-  const updateForm = (field: keyof typeof form, value: string) => {
-    setForm((previous) => ({ ...previous, [field]: value }));
-  };
+  const updateForm = (field: keyof typeof form, value: string) => setForm((previous) => ({ ...previous, [field]: value }));
 
   const pickMedia = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Gallery access needed", "Allow gallery access so you can select a product image or video.");
+      Alert.alert("Gallery access needed", "Allow gallery access so you can select product images and videos.");
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images", "videos"],
-      allowsMultipleSelection: false,
+      allowsMultipleSelection: true,
       quality: 1,
     });
-
-    const asset = result.canceled ? undefined : result.assets?.[0];
-    if (!asset) return;
-
-    setMedia({
+    if (result.canceled || !result.assets?.length) return;
+    const additions = result.assets.map((asset, index) => ({
+      id: `${asset.assetId || asset.uri}-${Date.now()}-${index}`,
       uri: asset.uri,
-      type: asset.type === "video" ? "video" : "image",
+      type: asset.type === "video" ? "video" as const : "image" as const,
       mimeType: asset.mimeType,
       fileName: asset.fileName,
-    });
+    }));
+    setMedia((previous) => [...previous, ...additions.filter((item) => !previous.some((old) => old.uri === item.uri))]);
   };
 
   const handleSave = async (status: "DRAFT" | "PUBLISHED") => {
-    const numericPrice = Number(form.price);
-    const numericStock = Number(form.stockQuantity);
-    if (!form.title.trim() || !form.sku.trim() || !Number.isFinite(numericPrice) || numericPrice <= 0) {
-      Alert.alert("Complete the essentials", "Product title, SKU and a valid price are required.");
+    const usd = Number(form.usdPrice);
+    const pkr = Number(form.pkrPrice);
+    const inr = Number(form.inrPrice);
+    const stock = Number(form.stockQuantity);
+    if (!form.title.trim() || !form.sku.trim() || !Number.isFinite(usd) || usd <= 0 || !Number.isFinite(pkr) || pkr <= 0 || !Number.isFinite(inr) || inr <= 0) {
+      Alert.alert("Complete the price board", "Title, SKU and all three regional prices (USD, PKR and INR) are required.");
       return;
     }
-    if (!Number.isFinite(numericStock) || numericStock < 0) {
+    if (!Number.isFinite(stock) || stock < 0) {
       Alert.alert("Check stock quantity", "Stock must be zero or a positive number.");
       return;
     }
 
     setLoading(true);
+    setUploadProgress("");
     try {
-      let imageUrl: string | undefined;
-      if (media) {
-        const uploaded = await uploadPickedMedia(media);
-        imageUrl = uploaded.publicUrl;
+      const uploadedMedia: Array<{ url: string; type: "image" | "video"; fileName?: string }> = [];
+      for (let index = 0; index < media.length; index += 1) {
+        setUploadProgress(`Uploading media ${index + 1} of ${media.length}…`);
+        const uploaded = await uploadPickedMedia(media[index]);
+        uploadedMedia.push({ url: uploaded.publicUrl, type: uploaded.type, fileName: media[index].fileName || undefined });
       }
 
       await apiPost("/products", {
         title: form.title.trim(),
         sku: form.sku.trim(),
-        price: numericPrice,
+        price: usd,
+        currency: "USD",
+        regionalPrices: { USD: usd, PKR: pkr, INR: inr },
+        media: uploadedMedia,
+        imageUrl: uploadedMedia[0]?.url,
         description: form.description.trim() || undefined,
         category: form.category.trim() || undefined,
-        stockQuantity: Math.floor(numericStock),
-        imageUrl,
+        stockQuantity: Math.floor(stock),
         status,
       });
 
-      Alert.alert("Piece secured", status === "PUBLISHED" ? "The product is now live in your atelier." : "The product was saved as a draft.", [
-        { text: "Done", onPress: () => router.back() },
-      ]);
+      Alert.alert("Piece secured", status === "PUBLISHED" ? "The product is now live in your atelier." : "The product was saved as a draft.", [{ text: "Done", onPress: () => router.back() }]);
     } catch (error: any) {
       console.error("Save product error:", error);
       Alert.alert("Could not save product", error?.response?.data?.error || error?.message || "Please try again.");
     } finally {
       setLoading(false);
+      setUploadProgress("");
     }
   };
 
-  const InputField = ({
-    label,
-    value,
-    onChangeText,
-    keyboardType = "default",
-    multiline = false,
-    placeholder,
-  }: {
-    label: string;
-    value: string;
-    onChangeText: (value: string) => void;
-    keyboardType?: "default" | "numeric" | "decimal-pad";
-    multiline?: boolean;
-    placeholder?: string;
-  }) => (
+  const InputField = ({ label, value, onChangeText, keyboardType = "default", multiline = false, placeholder }: { label: string; value: string; onChangeText: (value: string) => void; keyboardType?: "default" | "numeric" | "decimal-pad"; multiline?: boolean; placeholder?: string }) => (
     <View style={styles.inputGroup}>
       <Text style={[styles.inputLabel, { color: colors.muted }]}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        multiline={multiline}
-        returnKeyType={multiline ? "default" : "done"}
-        placeholder={placeholder}
-        placeholderTextColor={`${colors.muted}B3`}
-        style={[styles.input, { backgroundColor: `${colors.background}CC`, color: colors.foreground, borderColor: colors.border, minHeight: multiline ? 116 : 52 }]}
-      />
+      <TextInput value={value} onChangeText={onChangeText} keyboardType={keyboardType} multiline={multiline} returnKeyType={multiline ? "default" : "done"} placeholder={placeholder} placeholderTextColor={`${colors.muted}B3`} style={[styles.input, { backgroundColor: `${colors.background}CC`, color: colors.foreground, borderColor: colors.border, minHeight: multiline ? 116 : 52 }]} />
     </View>
   );
 
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} containerClassName="flex-1" className="flex-1">
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={styles.topRow}>
-          <SectionHeading eyebrow="ATELIER / NEW PIECE" title="Create product" detail="Build the product once. Let the storefront do the selling." />
-          <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.closeButton, { borderColor: colors.border }, pressed && styles.closePressed]}>
-            <Text style={[styles.closeText, { color: colors.muted }]}>Close</Text>
-          </Pressable>
-        </View>
+        <View style={styles.topRow}><SectionHeading eyebrow="ATELIER / NEW PIECE" title="Create product" detail="Build the product once. Let the storefront do the selling." /><Pressable onPress={() => router.back()} style={({ pressed }) => [styles.closeButton, { borderColor: colors.border }, pressed && styles.closePressed]}><Text style={[styles.closeText, { color: colors.muted }]}>Close</Text></Pressable></View>
 
         <LuxuryCard accent style={styles.mediaCard}>
-          <View style={styles.mediaHeader}>
-            <View style={styles.mediaCopy}>
-              <Text style={[styles.sectionEyebrow, { color: colors.primary }]}>COVER MEDIA</Text>
-              <Text style={[styles.mediaTitle, { color: colors.foreground }]}>Choose from gallery</Text>
-              <Text style={[styles.mediaDetail, { color: colors.muted }]}>Image or video. No URL copying, no manual hosting.</Text>
-            </View>
-            <StatusPill label={media ? media.type : "Not selected"} tone={media ? "success" : "neutral"} />
-          </View>
-
-          {media?.type === "image" ? (
-            <Image source={{ uri: media.uri }} style={styles.mediaPreview} resizeMode="cover" />
-          ) : media?.type === "video" ? (
-            <View style={[styles.videoPreview, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}55` }]}>
-              <Text style={[styles.videoMark, { color: colors.primary }]}>▶</Text>
-              <Text style={[styles.videoText, { color: colors.foreground }]}>Video selected</Text>
-              <Text style={[styles.videoSubtext, { color: colors.muted }]} numberOfLines={1}>{media.fileName || "Gallery video"}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.mediaActions}>
-            <LuxuryButton label={media ? "Replace media" : "Open gallery"} onPress={pickMedia} variant={media ? "secondary" : "primary"} style={styles.mediaButton} />
-            {media ? <LuxuryButton label="Remove" onPress={() => setMedia(null)} variant="ghost" style={styles.removeButton} /> : null}
-          </View>
+          <View style={styles.mediaHeader}><View style={styles.mediaCopy}><Text style={[styles.sectionEyebrow, { color: colors.primary }]}>MEDIA GALLERY</Text><Text style={[styles.mediaTitle, { color: colors.foreground }]}>Choose as many as you want</Text><Text style={[styles.mediaDetail, { color: colors.muted }]}>Images and videos from your phone gallery. No URL copying.</Text></View><StatusPill label={`${media.length} selected`} tone={media.length ? "success" : "neutral"} /></View>
+          {media.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaStrip}>{media.map((item, index) => <View key={item.id} style={styles.mediaItem}>{item.type === "image" ? <Image source={{ uri: item.uri }} style={styles.mediaPreview} resizeMode="cover" /> : <View style={[styles.videoPreview, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}55` }]}><Text style={[styles.videoMark, { color: colors.primary }]}>▶</Text><Text style={[styles.videoText, { color: colors.foreground }]}>Video</Text></View>}<Pressable onPress={() => setMedia((previous) => previous.filter((selected) => selected.id !== item.id))} style={[styles.removeBadge, { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.removeBadgeText, { color: colors.foreground }]}>×</Text></Pressable><Text style={[styles.mediaIndex, { color: colors.muted }]}>{index + 1}</Text></View>)}</ScrollView> : <View style={[styles.emptyMedia, { borderColor: colors.border }]}><Text style={[styles.emptyMediaMark, { color: colors.primary }]}>＋</Text><Text style={[styles.emptyMediaTitle, { color: colors.foreground }]}>Your gallery is empty for this piece</Text><Text style={[styles.mediaDetail, { color: colors.muted }]}>Tap below to choose photos or videos.</Text></View>}
+          <View style={styles.mediaActions}><LuxuryButton label={media.length ? "Add more photos / videos" : "Open gallery"} onPress={pickMedia} variant="primary" style={styles.mediaButton} disabled={loading} />{media.length ? <LuxuryButton label="Clear all" onPress={() => setMedia([])} variant="ghost" style={styles.removeButton} disabled={loading} /> : null}</View>
+          {uploadProgress ? <Text style={[styles.uploadProgress, { color: colors.primary }]}>{uploadProgress}</Text> : null}
         </LuxuryCard>
 
         <LuxuryCard style={styles.formCard}>
-          <Text style={[styles.formTitle, { color: colors.foreground }]}>Product identity</Text>
-          <Text style={[styles.formDetail, { color: colors.muted }]}>A clean, searchable record for your catalog.</Text>
-          <View style={styles.formGap}>
-            <InputField label="Product title" value={form.title} onChangeText={(value) => updateForm("title", value)} placeholder="e.g. Obsidian Signature Tee" />
-            <View style={styles.twoColumn}>
-              <View style={styles.column}>
-                <InputField label="SKU" value={form.sku} onChangeText={(value) => updateForm("sku", value)} placeholder="HADX-001" />
-              </View>
-              <View style={styles.column}>
-                <InputField label="Price (USD)" value={form.price} onChangeText={(value) => updateForm("price", value)} keyboardType="decimal-pad" placeholder="120" />
-              </View>
-            </View>
-            <View style={styles.twoColumn}>
-              <View style={styles.column}>
-                <InputField label="Category" value={form.category} onChangeText={(value) => updateForm("category", value)} placeholder="Atelier" />
-              </View>
-              <View style={styles.column}>
-                <InputField label="Stock" value={form.stockQuantity} onChangeText={(value) => updateForm("stockQuantity", value)} keyboardType="numeric" placeholder="10" />
-              </View>
-            </View>
-            <InputField label="Description" value={form.description} onChangeText={(value) => updateForm("description", value)} multiline placeholder="Tell the story of this piece…" />
-          </View>
+          <Text style={[styles.formTitle, { color: colors.foreground }]}>Product identity</Text><Text style={[styles.formDetail, { color: colors.muted }]}>SKU means Stock Keeping Unit: the unique internal code for finding and managing this product. You can generate it automatically.</Text>
+          <View style={styles.formGap}><InputField label="Product title" value={form.title} onChangeText={(value) => updateForm("title", value)} placeholder="e.g. Obsidian Signature Tee" /><View style={styles.skuRow}><View style={styles.skuInput}><InputField label="SKU / internal product code" value={form.sku} onChangeText={(value) => updateForm("sku", value)} placeholder="HADX-OBSIDIAN-001" /></View><LuxuryButton label="Auto-generate" onPress={() => updateForm("sku", makeSku(form.title))} variant="ghost" style={styles.skuButton} disabled={loading} /></View><View style={styles.twoColumn}><View style={styles.column}><InputField label="USD (global base)" value={form.usdPrice} onChangeText={(value) => updateForm("usdPrice", value)} keyboardType="decimal-pad" placeholder="120" /></View><View style={styles.column}><InputField label="PKR (Pakistan)" value={form.pkrPrice} onChangeText={(value) => updateForm("pkrPrice", value)} keyboardType="decimal-pad" placeholder="35000" /></View></View><View style={styles.twoColumn}><View style={styles.column}><InputField label="INR (India)" value={form.inrPrice} onChangeText={(value) => updateForm("inrPrice", value)} keyboardType="decimal-pad" placeholder="10000" /></View><View style={styles.column}><InputField label="Stock quantity" value={form.stockQuantity} onChangeText={(value) => updateForm("stockQuantity", value)} keyboardType="numeric" placeholder="10" /></View></View><Text style={[styles.priceNote, { color: colors.muted }]}>These are owner-set regional prices. Customers see the correct one based on their selected/ detected region; prices are not silently guessed from exchange rates.</Text><InputField label="Category" value={form.category} onChangeText={(value) => updateForm("category", value)} placeholder="Atelier" /><InputField label="Description" value={form.description} onChangeText={(value) => updateForm("description", value)} multiline placeholder="Tell the story of this piece…" /></View>
         </LuxuryCard>
-
-        <View style={styles.footerActions}>
-          <LuxuryButton label="Save draft" onPress={() => void handleSave("DRAFT")} variant="secondary" loading={loading} style={styles.footerButton} />
-          <LuxuryButton label="Publish live" onPress={() => void handleSave("PUBLISHED")} variant="primary" loading={loading} style={styles.footerButton} />
-        </View>
+        <View style={styles.footerActions}><LuxuryButton label="Save draft" onPress={() => void handleSave("DRAFT")} variant="secondary" loading={loading} style={styles.footerButton} /><LuxuryButton label="Publish live" onPress={() => void handleSave("PUBLISHED")} variant="primary" loading={loading} style={styles.footerButton} /></View>
       </ScrollView>
     </ScreenContainer>
   );
@@ -208,20 +141,28 @@ const styles = StyleSheet.create({
   closeButton: { marginTop: 4, borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8 },
   closePressed: { opacity: 0.65, transform: [{ scale: 0.97 }] },
   closeText: { fontSize: 12, fontWeight: "800" },
-  mediaCard: { minHeight: 214 },
+  mediaCard: { minHeight: 238 },
   mediaHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 },
   mediaCopy: { flex: 1, gap: 5 },
   sectionEyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 2.1 },
   mediaTitle: { fontSize: 18, fontWeight: "900" },
   mediaDetail: { fontSize: 12, lineHeight: 18 },
-  mediaPreview: { width: "100%", height: 184, borderRadius: 16, marginTop: 16, backgroundColor: "#101010" },
-  videoPreview: { height: 184, borderRadius: 16, marginTop: 16, alignItems: "center", justifyContent: "center", borderWidth: 1, gap: 6 },
-  videoMark: { fontSize: 34, fontWeight: "900" },
-  videoText: { fontSize: 15, fontWeight: "900" },
-  videoSubtext: { maxWidth: "80%", fontSize: 11 },
+  mediaStrip: { gap: 10, paddingTop: 16, paddingBottom: 4 },
+  mediaItem: { width: 118, height: 142, position: "relative" },
+  mediaPreview: { width: 118, height: 118, borderRadius: 16, backgroundColor: "#101010" },
+  videoPreview: { width: 118, height: 118, borderRadius: 16, alignItems: "center", justifyContent: "center", borderWidth: 1, gap: 5 },
+  videoMark: { fontSize: 28, fontWeight: "900" },
+  videoText: { fontSize: 12, fontWeight: "900" },
+  removeBadge: { position: "absolute", top: 7, right: 7, width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  removeBadgeText: { fontSize: 21, lineHeight: 22 },
+  mediaIndex: { fontSize: 10, fontWeight: "800", marginTop: 4 },
+  emptyMedia: { minHeight: 130, borderRadius: 17, borderWidth: 1, borderStyle: "dashed", alignItems: "center", justifyContent: "center", gap: 5, marginTop: 16 },
+  emptyMediaMark: { fontSize: 28, fontWeight: "300" },
+  emptyMediaTitle: { fontSize: 13, fontWeight: "800" },
   mediaActions: { flexDirection: "row", gap: 10, marginTop: 16 },
   mediaButton: { flex: 1 },
-  removeButton: { minWidth: 90 },
+  removeButton: { minWidth: 88 },
+  uploadProgress: { fontSize: 11, fontWeight: "800", marginTop: 10 },
   formCard: { gap: 4 },
   formTitle: { fontSize: 18, fontWeight: "900" },
   formDetail: { fontSize: 12, lineHeight: 18, marginBottom: 10 },
@@ -229,8 +170,12 @@ const styles = StyleSheet.create({
   inputGroup: { gap: 6 },
   inputLabel: { fontSize: 11, fontWeight: "800", letterSpacing: 0.6 },
   input: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, lineHeight: 20, textAlignVertical: "top" },
+  skuRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
+  skuInput: { flex: 1 },
+  skuButton: { minHeight: 52, paddingHorizontal: 10, marginBottom: 0 },
   twoColumn: { flexDirection: "row", gap: 10 },
   column: { flex: 1 },
+  priceNote: { fontSize: 11, lineHeight: 17, marginTop: -4 },
   footerActions: { flexDirection: "row", gap: 10 },
   footerButton: { flex: 1 },
 });

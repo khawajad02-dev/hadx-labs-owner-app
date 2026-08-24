@@ -46,6 +46,10 @@ function statusTone(value: string | undefined): "success" | "warning" | "danger"
 export default function DashboardScreen() {
   const colors = useColors();
   const router = useRouter();
+  const isBento = colors.themeId === "bento-telemetry";
+  const isSpatial = colors.themeId === "visionos-spatial";
+  const isTerminal = colors.themeId === "cyberpunk-terminal";
+  const isNeumorphic = colors.themeId === "neumorphic-luxe";
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -92,17 +96,19 @@ export default function DashboardScreen() {
         <View style={styles.headerRow}>
           <View style={styles.headerCopy}>
             <Text style={[styles.eyebrow, { color: colors.primary }]}>HADX / OWNER CONTROL</Text>
-            <Text style={[styles.title, { color: colors.foreground }]}>Command center</Text>
-            <Text style={[styles.subtitle, { color: colors.muted }]}>A quiet, precise view of your atelier.</Text>
+            <Text style={[styles.title, { color: colors.foreground }]}>{isBento ? "Telemetry deck" : isSpatial ? "Spatial atelier" : isTerminal ? "System console" : isNeumorphic ? "Tactile command" : "Command center"}</Text>
+            <Text style={[styles.subtitle, { color: colors.muted }]}>{isBento ? "Modular signals, arranged for fast decisions." : isSpatial ? "A calm, layered view of your atelier." : isTerminal ? "Live operational signals from the HADX system." : isNeumorphic ? "Tactile controls for a quiet operating rhythm." : "A quiet, precise view of your atelier."}</Text>
           </View>
           <View style={[styles.orbDock, { borderColor: `${colors.primary}55` }]}>
             <CyberOrb size={82} />
           </View>
         </View>
 
-        <View style={styles.statusRow}>
+        <View style={[styles.statusRow, isTerminal && styles.terminalStatusRow]}>
           <StatusPill label={metrics?.serverStatus || "Awaiting signal"} tone={statusTone(metrics?.serverStatus)} />
           <StatusPill label={metrics?.databaseHealth || "Data state unknown"} tone={statusTone(metrics?.databaseHealth)} />
+          {isBento ? <StatusPill label="Grid synced" tone="success" /> : null}
+          {isSpatial ? <StatusPill label="Depth online" tone="neutral" /> : null}
         </View>
 
         {error ? (
@@ -135,8 +141,10 @@ export default function DashboardScreen() {
           </View>
         </LuxuryCard>
 
-        <SectionHeading eyebrow="ATELIER SNAPSHOT" title="The essentials" detail="Live counts from your store" />
-        <View style={styles.metricGrid}>
+        {isTerminal ? <LuxuryCard compact style={styles.eventCard}><Text style={[styles.eventEyebrow, { color: colors.primary }]}>LIVE EVENT STREAM</Text><Text style={[styles.eventLine, { color: colors.foreground }]}>› auth/session verified</Text><Text style={[styles.eventLine, { color: colors.muted }]}>› storefront route operational</Text><Text style={[styles.eventLine, { color: colors.muted }]}>› order queue ready</Text></LuxuryCard> : null}
+        {isSpatial ? <LuxuryCard accent style={styles.spatialCard}><Text style={[styles.metricLabel, { color: colors.primary }]}>SPATIAL LAYER</Text><Text style={[styles.spatialTitle, { color: colors.foreground }]}>Your atelier, in focus.</Text><Text style={[styles.spatialDetail, { color: colors.muted }]}>Move from signal to action with generous, calm surfaces.</Text></LuxuryCard> : null}
+        <SectionHeading eyebrow={isBento ? "BENTO SNAPSHOT" : "ATELIER SNAPSHOT"} title={isBento ? "Live modules" : "The essentials"} detail="Live counts from your store" />
+        <View style={[styles.metricGrid, isBento && styles.bentoMetricGrid, isNeumorphic && styles.neumorphicMetricGrid]}>
           <LuxuryCard compact style={styles.metricCard}>
             <Text style={[styles.metricLabel, { color: colors.muted }]}>Orders</Text>
             <Text style={[styles.metricValueLarge, { color: colors.primary }]}>
@@ -196,6 +204,15 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, lineHeight: 20 },
   orbDock: { width: 92, height: 92, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 46 },
   statusRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  terminalStatusRow: { paddingBottom: 2 },
+  bentoMetricGrid: { flexWrap: "wrap" },
+  neumorphicMetricGrid: { gap: 16 },
+  eventCard: { borderRadius: 10 },
+  eventEyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 2.1, marginBottom: 10 },
+  eventLine: { fontSize: 12, lineHeight: 21, fontFamily: "monospace" },
+  spatialCard: { minHeight: 142, justifyContent: "center" },
+  spatialTitle: { fontSize: 24, fontWeight: "900", marginTop: 9, marginBottom: 5 },
+  spatialDetail: { fontSize: 13, lineHeight: 20 },
   alertCard: { borderColor: "#643B37" },
   alertHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
   alertDot: { width: 8, height: 8, borderRadius: 4 },

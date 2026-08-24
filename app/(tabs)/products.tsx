@@ -4,6 +4,7 @@ import {
   Alert,
   FlatList,
   Image,
+  ScrollView,
   RefreshControl,
   StyleSheet,
   Text,
@@ -25,6 +26,8 @@ interface Product {
   priceInCents: number;
   currency?: string;
   imageUrl?: string | null;
+  media?: Array<{ url: string; type: "image" | "video"; fileName?: string }>;
+  regionalPrices?: { USD?: number; PKR?: number; INR?: number };
   category?: string | null;
   status: "DRAFT" | "PUBLISHED" | string;
   stockQuantity: number;
@@ -47,8 +50,10 @@ function normalizeResponse(data: ProductResponse | Product[]): ProductResponse {
 }
 
 function formatPrice(product: Product) {
-  const value = product.priceInCents / 100;
-  return `${product.currency === "PKR" ? "PKR" : product.currency === "EUR" ? "€" : "$"}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const usd = product.regionalPrices?.USD ?? product.priceInCents / 100;
+  const pkr = product.regionalPrices?.PKR;
+  const inr = product.regionalPrices?.INR;
+  return [`USD $${usd.toLocaleString("en-US", { maximumFractionDigits: 2 })}`, pkr ? `PKR ${pkr.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : null, inr ? `INR ₹${inr.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : null].filter(Boolean).join("  ·  ");
 }
 
 export default function ProductsScreen() {
@@ -122,11 +127,15 @@ export default function ProductsScreen() {
 
   const filters = useMemo(() => ["ALL", "PUBLISHED", "DRAFT"] as const, []);
 
-  const renderProduct = ({ item }: { item: Product }) => (
+  const renderProduct = ({ item }: { item: Product }) => {
+    const primaryMedia = item.media?.[0];
+    return (
     <LuxuryCard compact style={styles.productCard}>
       <View style={styles.productTop}>
-        {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.productImage} resizeMode="cover" />
+        {primaryMedia?.type === "video" ? (
+          <View style={[styles.productImage, styles.videoImage, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}35` }]}><Text style={[styles.videoMark, { color: colors.primary }]}>▶</Text><Text style={[styles.videoLabel, { color: colors.foreground }]}>Video</Text></View>
+        ) : primaryMedia?.url || item.imageUrl ? (
+          <Image source={{ uri: primaryMedia?.url || item.imageUrl || "" }} style={styles.productImage} resizeMode="cover" />
         ) : (
           <View style={[styles.productImage, styles.imagePlaceholder, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}35` }]}>
             <Text style={[styles.placeholderMark, { color: colors.primary }]}>H</Text>
@@ -139,6 +148,7 @@ export default function ProductsScreen() {
           </View>
           <Text style={[styles.productSku, { color: colors.muted }]}>{item.sku} · {item.category || "Uncategorised"}</Text>
           <Text style={[styles.productPrice, { color: colors.primary }]}>{formatPrice(item)}</Text>
+          <Text style={[styles.mediaCount, { color: colors.muted }]}>{item.media?.length || (item.imageUrl ? 1 : 0)} media asset{(item.media?.length || (item.imageUrl ? 1 : 0)) === 1 ? "" : "s"}</Text>
         </View>
       </View>
       <View style={styles.productMetaRow}>
@@ -150,7 +160,8 @@ export default function ProductsScreen() {
         <LuxuryButton label="Remove" onPress={() => handleDeleteProduct(item)} variant="danger" style={styles.productAction} />
       </View>
     </LuxuryCard>
-  );
+    );
+  };
 
   return (
     <ScreenContainer containerClassName="flex-1" className="flex-1">
@@ -234,13 +245,17 @@ const styles = StyleSheet.create({
   productCard: { gap: 14 },
   productTop: { flexDirection: "row", gap: 13 },
   productImage: { width: 76, height: 92, borderRadius: 14, backgroundColor: "#101010" },
+  videoImage: { borderWidth: 1, alignItems: "center", justifyContent: "center", gap: 3 },
+  videoMark: { fontSize: 22, fontWeight: "900" },
+  videoLabel: { fontSize: 10, fontWeight: "800" },
   imagePlaceholder: { borderWidth: 1, alignItems: "center", justifyContent: "center" },
   placeholderMark: { fontSize: 31, fontWeight: "900" },
   productCopy: { flex: 1, gap: 6 },
   productTitleRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 7 },
   productTitle: { flex: 1, fontSize: 16, fontWeight: "900", lineHeight: 20 },
   productSku: { fontSize: 11 },
-  productPrice: { fontSize: 18, fontWeight: "900" },
+  productPrice: { fontSize: 12, fontWeight: "900", lineHeight: 18 },
+  mediaCount: { fontSize: 10, fontWeight: "700" },
   productMetaRow: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#FFFFFF12", paddingTop: 11 },
   metaText: { fontSize: 11, fontWeight: "700" },
   productActions: { flexDirection: "row", gap: 9 },

@@ -128,7 +128,7 @@ export default function SettingsScreen() {
                     </View>
                     <Text style={[styles.presetDescription, { color: colors.muted }]}>{theme.description}</Text>
                     <Text style={[styles.presetMeta, { color: selected ? colors.primary : colors.muted }]}>
-                      {theme.motion.scanline ? "SCANLINE / TELEMETRY" : "ATMOSPHERIC / DEPTH"}
+                      {theme.id === "bento-telemetry" ? "BENTO GRID / MODULAR" : theme.id === "visionos-spatial" ? "SPATIAL GLASS / FLOATING" : theme.id === "cyberpunk-terminal" ? "TERMINAL / EVENT STREAM" : theme.id === "neumorphic-luxe" ? "TACTILE / SOFT DEPTH" : "OBSIDIAN / CYBER CORE"}
                     </Text>
                   </View>
                 </View>

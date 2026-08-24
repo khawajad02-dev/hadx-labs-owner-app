@@ -23,6 +23,38 @@ import { useEffect, useRef } from "react";
 
 import { useColors } from "@/hooks/use-colors";
 
+function ThemeBackdrop() {
+  const colors = useColors();
+  const motion = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(motion, { toValue: 1, duration: Math.max(1600, colors.motion.floatDuration * 0.7), easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(motion, { toValue: 0, duration: Math.max(1600, colors.motion.floatDuration * 0.7), easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [colors.motion.floatDuration, motion]);
+
+  const drift = motion.interpolate({ inputRange: [0, 1], outputRange: [-18, 18] });
+  const isBento = colors.themeId === "bento-telemetry";
+  const isSpatial = colors.themeId === "visionos-spatial";
+  const isTerminal = colors.themeId === "cyberpunk-terminal";
+  const isNeumorphic = colors.themeId === "neumorphic-luxe";
+
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+      {isBento || isTerminal ? <View style={styles.sceneGrid}>{Array.from({ length: 8 }).map((_, index) => <View key={`h-${index}`} style={[styles.gridHorizontal, { top: `${(index + 1) * 11}%`, borderColor: `${colors.primary}12` }]} />)}{Array.from({ length: 5 }).map((_, index) => <View key={`v-${index}`} style={[styles.gridVertical, { left: `${(index + 1) * 17}%`, borderColor: `${colors.primary}12` }]} />)}</View> : null}
+      {isSpatial ? <Animated.View style={[styles.spatialHalo, { backgroundColor: colors.primary, opacity: 0.09, transform: [{ translateX: drift }, { scale: 1.1 }] }]} /> : null}
+      {isNeumorphic ? <View style={[styles.neumorphicHalo, { backgroundColor: colors.surface, shadowColor: colors.primary }]} /> : null}
+      {isTerminal ? <Animated.View style={[styles.scanline, { backgroundColor: colors.primary, opacity: 0.18, transform: [{ translateY: drift }] }]} /> : null}
+      {!isBento && !isSpatial && !isTerminal && !isNeumorphic ? <Animated.View style={[styles.cyberHalo, { borderColor: `${colors.accent}35`, transform: [{ rotate: drift }] }]} /> : null}
+    </View>
+  );
+}
+
 export function LuxuryScene({ children }: { children: ReactNode }) {
   const colors = useColors();
   const drift = useRef(new Animated.Value(0)).current;
@@ -64,6 +96,7 @@ export function LuxuryScene({ children }: { children: ReactNode }) {
           },
         ]}
       />
+      <ThemeBackdrop />
       <Animated.View
         pointerEvents="none"
         style={[
@@ -93,6 +126,8 @@ export function LuxuryCard({
 }) {
   const colors = useColors();
   const id = accent ? "accentGlow" : "surfaceGlow";
+  const radius = colors.themeId === "bento-telemetry" ? 15 : colors.themeId === "visionos-spatial" ? 30 : colors.themeId === "cyberpunk-terminal" ? 9 : colors.themeId === "neumorphic-luxe" ? 21 : 24;
+  const contentPadding = colors.themeId === "bento-telemetry" ? 14 : colors.themeId === "visionos-spatial" ? 22 : colors.themeId === "cyberpunk-terminal" ? 12 : 18;
 
   return (
     <View
@@ -100,6 +135,7 @@ export function LuxuryCard({
         styles.card,
         compact && styles.cardCompact,
         {
+          borderRadius: radius,
           backgroundColor: colors.surface,
           borderColor: accent ? colors.primary : colors.border,
           shadowColor: colors.primary,
@@ -116,9 +152,9 @@ export function LuxuryCard({
             <Stop offset="100%" stopColor={colors.surface} stopOpacity={0} />
           </RadialGradient>
         </Defs>
-        <Rect x="0" y="0" width="100%" height="100%" rx="24" fill={`url(#${id})`} />
+        <Rect x="0" y="0" width="100%" height="100%" rx={radius} fill={`url(#${id})`} />
       </Svg>
-      <View style={styles.cardContent}>{children}</View>
+      <View style={[styles.cardContent, { padding: contentPadding }]}>{children}</View>
     </View>
   );
 }
@@ -143,6 +179,7 @@ export function LuxuryButton({
   labelStyle?: StyleProp<TextStyle>;
 }) {
   const colors = useColors();
+  const buttonRadius = colors.themeId === "bento-telemetry" ? 12 : colors.themeId === "visionos-spatial" ? 20 : colors.themeId === "cyberpunk-terminal" ? 7 : colors.themeId === "neumorphic-luxe" ? 22 : 16;
   const palette = {
     primary: { backgroundColor: colors.primary, borderColor: colors.primary, textColor: colors.background },
     secondary: { backgroundColor: colors.surface, borderColor: colors.border, textColor: colors.foreground },
@@ -159,6 +196,7 @@ export function LuxuryButton({
       style={({ pressed }) => [
         styles.button,
         {
+          borderRadius: buttonRadius,
           backgroundColor: palette.backgroundColor,
           borderColor: palette.borderColor,
           opacity: disabled || loading ? 0.55 : 1,
@@ -187,11 +225,12 @@ export function SectionHeading({
   action?: ReactNode;
 }) {
   const colors = useColors();
+  const headingSize = colors.themeId === "bento-telemetry" ? 23 : colors.themeId === "cyberpunk-terminal" ? 24 : colors.themeId === "visionos-spatial" ? 31 : 28;
   return (
     <View style={styles.headingRow}>
       <View style={styles.headingCopy}>
         {eyebrow ? <Text style={[styles.eyebrow, { color: colors.primary }]}>{eyebrow}</Text> : null}
-        <Text style={[styles.headingTitle, { color: colors.foreground }]}>{title}</Text>
+        <Text style={[styles.headingTitle, { color: colors.foreground, fontSize: headingSize }]}>{title}</Text>
         {detail ? <Text style={[styles.headingDetail, { color: colors.muted }]}>{detail}</Text> : null}
       </View>
       {action ? <View>{action}</View> : null}
@@ -299,6 +338,13 @@ export function MiniSparkline({ values, color }: { values: number[]; color?: str
 
 const styles = StyleSheet.create({
   scene: { flex: 1, overflow: "hidden" },
+  sceneGrid: { ...StyleSheet.absoluteFillObject },
+  gridHorizontal: { position: "absolute", left: 0, right: 0, borderTopWidth: 1 },
+  gridVertical: { position: "absolute", top: 0, bottom: 0, borderLeftWidth: 1 },
+  spatialHalo: { position: "absolute", width: 420, height: 420, borderRadius: 210, top: -180, right: -160 },
+  neumorphicHalo: { position: "absolute", width: 280, height: 280, borderRadius: 140, bottom: -170, right: -80, opacity: 0.14, shadowOpacity: 0.7, shadowRadius: 40, elevation: 8 },
+  scanline: { position: "absolute", left: 0, right: 0, height: 2, top: "42%" },
+  cyberHalo: { position: "absolute", width: 360, height: 360, borderRadius: 180, borderWidth: 1, top: -170, right: -150, opacity: 0.8 },
   sceneContent: { flex: 1 },
   ambientOrb: { position: "absolute", width: 300, height: 300, borderRadius: 150, top: -130, right: -120 },
   ambientOrbSmall: { position: "absolute", width: 210, height: 210, borderRadius: 105, bottom: 50, left: -120 },

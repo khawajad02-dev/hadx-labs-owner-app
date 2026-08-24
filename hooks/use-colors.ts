@@ -8,6 +8,7 @@ type LuxuryPalette = ThemeColorPalette & {
   warning: string;
   error: string;
   accent: string;
+  themeId: string;
   themeName: string;
   themeDescription: string;
   motion: {
@@ -28,6 +29,7 @@ export function useColors(): LuxuryPalette {
 
     return {
       ...palette,
+      themeId: currentTheme,
       text: palette.foreground,
       background: palette.background,
       tint: palette.primary,
