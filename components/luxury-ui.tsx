@@ -39,6 +39,7 @@ function ThemeBackdrop() {
   }, [colors.motion.floatDuration, motion]);
 
   const drift = motion.interpolate({ inputRange: [0, 1], outputRange: [-18, 18] });
+  const rotation = motion.interpolate({ inputRange: [0, 1], outputRange: ["-6deg", "6deg"] });
   const isBento = colors.themeId === "bento-telemetry";
   const isSpatial = colors.themeId === "visionos-spatial";
   const isTerminal = colors.themeId === "cyberpunk-terminal";
@@ -50,7 +51,7 @@ function ThemeBackdrop() {
       {isSpatial ? <Animated.View style={[styles.spatialHalo, { backgroundColor: colors.primary, opacity: 0.09, transform: [{ translateX: drift }, { scale: 1.1 }] }]} /> : null}
       {isNeumorphic ? <View style={[styles.neumorphicHalo, { backgroundColor: colors.surface, shadowColor: colors.primary }]} /> : null}
       {isTerminal ? <Animated.View style={[styles.scanline, { backgroundColor: colors.primary, opacity: 0.18, transform: [{ translateY: drift }] }]} /> : null}
-      {!isBento && !isSpatial && !isTerminal && !isNeumorphic ? <Animated.View style={[styles.cyberHalo, { borderColor: `${colors.accent}35`, transform: [{ rotate: drift }] }]} /> : null}
+      {!isBento && !isSpatial && !isTerminal && !isNeumorphic ? <Animated.View style={[styles.cyberHalo, { borderColor: `${colors.accent}35`, transform: [{ rotate: rotation }] }]} /> : null}
     </View>
   );
 }
