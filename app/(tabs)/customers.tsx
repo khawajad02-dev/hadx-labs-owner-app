@@ -21,6 +21,11 @@ interface Customer {
   name: string;
   email: string;
   phone: string;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  latestProductTitle?: string | null;
+  latestSize?: string | null;
   totalOrders: number;
   lifetimeValue: number;
   lastOrderDate?: string;
@@ -68,12 +73,12 @@ export default function CustomersScreen() {
   const visibleCustomers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return customers;
-    return customers.filter((customer) => `${customer.name} ${customer.email} ${customer.phone}`.toLowerCase().includes(normalized));
+    return customers.filter((customer) => `${customer.name} ${customer.email} ${customer.phone} ${customer.address || ""} ${customer.city || ""} ${customer.country || ""} ${customer.latestProductTitle || ""} ${customer.latestSize || ""}`.toLowerCase().includes(normalized));
   }, [customers, query]);
 
   const contact = async (kind: "whatsapp" | "call" | "email", customer: Customer) => {
     const urls = {
-      whatsapp: `https://wa.me/${customer.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi ${customer.name}, thank you for your business with HADX LABS.`)}`,
+      whatsapp: `https://wa.me/${customer.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Congratulations ${customer.name}! Your HADX LABS parcel${customer.latestProductTitle ? ` for ${customer.latestProductTitle}` : ""}${customer.latestSize ? ` in size ${customer.latestSize}` : ""} is being prepared and is expected within 5–7 working days. We will contact you with any delivery update.`)}`,
       call: `tel:${customer.phone}`,
       email: `mailto:${customer.email}`,
     };
@@ -95,6 +100,11 @@ export default function CustomersScreen() {
           <Text style={[styles.customerEmail, { color: colors.muted }]} numberOfLines={1}>{item.email}</Text>
         </View>
         <StatusPill label={item.totalOrders > 4 ? "Collector" : "Client"} tone={item.totalOrders > 4 ? "success" : "neutral"} />
+      </View>
+      <View style={[styles.deliveryBlock, { borderColor: `${colors.border}88`, backgroundColor: `${colors.surface}99` }]}>
+        <Text style={[styles.deliveryTitle, { color: colors.primary }]}>LATEST DELIVERY</Text>
+        <Text style={[styles.deliveryText, { color: colors.foreground }]}>{item.latestProductTitle || "No product recorded"}{item.latestSize ? ` · Size ${item.latestSize}` : ""}</Text>
+        <Text style={[styles.deliveryText, { color: colors.muted }]}>{item.address || "Address not recorded"}{item.city ? `, ${item.city}` : ""}{item.country ? `, ${item.country}` : ""}</Text>
       </View>
       <View style={[styles.customerStats, { borderColor: `${colors.border}88` }]}>
         <View><Text style={[styles.statLabel, { color: colors.muted }]}>Orders</Text><Text style={[styles.statValue, { color: colors.foreground }]}>{item.totalOrders.toLocaleString("en-US")}</Text></View>
@@ -132,6 +142,9 @@ const styles = StyleSheet.create({
   customerCopy: { flex: 1, gap: 4 },
   customerName: { fontSize: 16, fontWeight: "900" },
   customerEmail: { fontSize: 11 },
+  deliveryBlock: { gap: 4, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 10 },
+  deliveryTitle: { fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
+  deliveryText: { fontSize: 12, lineHeight: 17 },
   customerStats: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 12, gap: 8 },
   statLabel: { fontSize: 10, marginBottom: 4 },
   statValue: { fontSize: 15, fontWeight: "900" },

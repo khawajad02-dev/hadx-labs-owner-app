@@ -14,7 +14,7 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/components/luxury-ui";
 import { useColors } from "@/hooks/use-colors";
-import { apiGet, apiPut } from "@/lib/api-client";
+import { apiDelete, apiGet, apiPut } from "@/lib/api-client";
 
 interface Order {
   id: string;
@@ -23,6 +23,9 @@ interface Order {
   email: string;
   phone: string;
   address: string;
+  city?: string | null;
+  country?: string | null;
+  size?: string | null;
   productTitle: string;
   quantity: number;
   totalAmountInCents: number;
@@ -53,7 +56,7 @@ function normalizeResponse(data: OrderResponse | Order[]): OrderResponse {
 
 function formatAmount(order: Order) {
   const value = order.totalAmountInCents / 100;
-  return `${order.currency === "PKR" ? "PKR " : order.currency === "EUR" ? "€" : "$"}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${order.currency === "PKR" ? "PKR " : order.currency === "INR" ? "₹" : order.currency === "EUR" ? "€" : "$"}${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function toneForStatus(status: string): "success" | "warning" | "danger" | "neutral" {
@@ -144,9 +147,33 @@ export default function OrdersScreen() {
       Alert.alert("No phone number", "This order has no customer phone number.");
       return;
     }
-    const message = `Hi ${order.fullName}, this is an update about your HADX LABS order ${order.orderReference}.`;
+    const destination = [order.city, order.country].filter(Boolean).join(", ") || order.address;
+    const message = `Congratulations ${order.fullName}! Your HADX LABS parcel ${order.orderReference} has been received. ${order.productTitle}${order.size ? ` (size ${order.size})` : ""} is being prepared for delivery within 5–7 working days. Delivery destination: ${destination}. We will contact you if anything else is needed.`;
     const url = `https://wa.me/${order.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
     Linking.openURL(url).catch(() => Alert.alert("Could not open WhatsApp", "Please check that WhatsApp is installed."));
+  };
+
+  const deleteCancelledTestOrder = (order: Order) => {
+    if (order.orderStatus !== "CANCELLED" && order.orderStatus !== "EXPIRED") return;
+    Alert.alert("Delete cancelled test order?", `Remove ${order.orderReference} from the order queue? This cannot be undone.`, [
+      { text: "Keep", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          const previous = orders;
+          setOrders((current) => current.filter((entry) => entry.id !== order.id));
+          setTotal((current) => Math.max(current - 1, 0));
+          try {
+            await apiDelete(`/orders/${order.id}`);
+          } catch (requestError: any) {
+            setOrders(previous);
+            setTotal((current) => current + 1);
+            Alert.alert("Could not delete order", requestError?.response?.data?.error || "Try again when the connection is restored.");
+          }
+        },
+      },
+    ]);
   };
 
   const renderOrder = ({ item }: { item: Order }) => (
@@ -165,6 +192,17 @@ export default function OrdersScreen() {
           <Text style={[styles.detailValue, { color: colors.foreground }]} numberOfLines={1}>{item.productTitle} × {item.quantity}</Text>
         </View>
         <View style={styles.detailRow}>
+          <Text style={[styles.detailLabel, { color: colors.muted }]}>Size</Text>
+          <Text style={[styles.detailValue, { color: colors.foreground }]}>{item.size || "Not recorded"}</Text>
+        </View>
+        <View style={[styles.customerDetails, { borderColor: `${colors.border}88`, backgroundColor: `${colors.surface}99` }]}>
+          <Text style={[styles.customerDetailsTitle, { color: colors.primary }]}>DELIVERY DETAILS</Text>
+          <Text style={[styles.customerDetailsText, { color: colors.foreground }]}>{item.email}</Text>
+          <Text style={[styles.customerDetailsText, { color: colors.foreground }]}>{item.phone}</Text>
+          <Text style={[styles.customerDetailsText, { color: colors.foreground }]}>{item.address}</Text>
+          <Text style={[styles.customerDetailsText, { color: colors.foreground }]}>{[item.city, item.country].filter(Boolean).join(", ") || "City/country not recorded"}</Text>
+        </View>
+        <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Value</Text>
           <Text style={[styles.amount, { color: colors.primary }]}>{formatAmount(item)}</Text>
         </View>
@@ -181,6 +219,7 @@ export default function OrdersScreen() {
         {item.orderStatus === "RESERVED" ? <LuxuryButton label="Confirm" onPress={() => void updateOrderStatus(item.id, "CONFIRMED")} variant="primary" style={styles.actionButton} /> : null}
         {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item.id, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
         <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" style={styles.actionButton} />
+        {item.orderStatus === "CANCELLED" || item.orderStatus === "EXPIRED" ? <LuxuryButton label="Delete test" onPress={() => deleteCancelledTestOrder(item)} variant="danger" style={styles.actionButton} /> : null}
       </View>
     </LuxuryCard>
   );
@@ -209,6 +248,7 @@ export default function OrdersScreen() {
               returnKeyType="search"
               style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
             />
+            <LuxuryButton label="Refresh order queue" onPress={() => { setRefreshing(true); void fetchOrders(false); }} variant="ghost" style={styles.refreshButton} />
             <View style={[styles.filterRow, themeFilterStyle]}>
               {FILTERS.map((item) => (
                 <LuxuryButton
@@ -255,12 +295,16 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: "row", gap: 6 },
   filterButton: { flex: 1, minHeight: 40, paddingHorizontal: 5 },
   filterLabel: { fontSize: 10 },
+  refreshButton: { alignSelf: "flex-start", minHeight: 38, paddingHorizontal: 14 },
   orderCard: { gap: 14 },
   orderHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 },
   orderCopy: { flex: 1, gap: 4 },
   orderReference: { fontSize: 16, fontWeight: "900" },
   customerName: { fontSize: 12 },
   orderBody: { gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 12 },
+  customerDetails: { gap: 4, borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 10 },
+  customerDetailsTitle: { fontSize: 10, fontWeight: "900", letterSpacing: 1.2, marginBottom: 2 },
+  customerDetailsText: { fontSize: 12, lineHeight: 17 },
   detailRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   detailLabel: { fontSize: 11, fontWeight: "700" },
   detailValue: { flex: 1, textAlign: "right", fontSize: 12, fontWeight: "700" },
