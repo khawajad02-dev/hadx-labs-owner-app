@@ -66,6 +66,17 @@ function toneForStatus(status: string): "success" | "warning" | "danger" | "neut
 
 export default function OrdersScreen() {
   const colors = useColors();
+  const themeCardStyle = colors.themeId === "bento-telemetry"
+    ? styles.bentoCard
+    : colors.themeId === "visionos-spatial"
+      ? styles.spatialCard
+      : colors.themeId === "cyberpunk-terminal"
+        ? styles.terminalCard
+        : colors.themeId === "neumorphic-luxe"
+          ? styles.neumorphicCard
+          : styles.cyberCard;
+  const themeBodyStyle = colors.themeId === "cyberpunk-terminal" ? styles.terminalBody : colors.themeId === "visionos-spatial" ? styles.spatialBody : undefined;
+  const themeActionStyle = colors.themeId === "bento-telemetry" ? styles.bentoActions : colors.themeId === "neumorphic-luxe" ? styles.neumorphicActions : undefined;
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<OrderFilter>("ALL");
@@ -136,7 +147,7 @@ export default function OrdersScreen() {
   };
 
   const renderOrder = ({ item }: { item: Order }) => (
-    <LuxuryCard compact style={styles.orderCard}>
+    <LuxuryCard compact style={[styles.orderCard, themeCardStyle]}>
       <View style={styles.orderHeader}>
         <View style={styles.orderCopy}>
           <Text style={[styles.orderReference, { color: colors.foreground }]}>{item.orderReference}</Text>
@@ -144,7 +155,7 @@ export default function OrdersScreen() {
         </View>
         <StatusPill label={item.orderStatus} tone={toneForStatus(item.orderStatus)} />
       </View>
-      <View style={styles.orderBody}>
+      <View style={[styles.orderBody, themeBodyStyle]}>
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Piece</Text>
           <Text style={[styles.detailValue, { color: colors.foreground }]} numberOfLines={1}>{item.productTitle} × {item.quantity}</Text>
@@ -162,7 +173,7 @@ export default function OrdersScreen() {
           <Text style={[styles.detailValue, { color: colors.foreground }]}>{new Date(item.createdAt).toLocaleDateString()}</Text>
         </View>
       </View>
-      <View style={styles.actionRow}>
+      <View style={[styles.actionRow, themeActionStyle]}>
         {item.orderStatus === "RESERVED" ? <LuxuryButton label="Confirm" onPress={() => void updateOrderStatus(item.id, "CONFIRMED")} variant="primary" style={styles.actionButton} /> : null}
         {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item.id, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
         <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" style={styles.actionButton} />
@@ -261,4 +272,13 @@ const styles = StyleSheet.create({
   emptyTitle: { textAlign: "center", fontSize: 18, fontWeight: "900", lineHeight: 24 },
   emptyText: { textAlign: "center", fontSize: 12, lineHeight: 18 },
   footerLoading: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 18 },
+  bentoCard: { borderRadius: 15 },
+  spatialCard: { borderRadius: 30, marginVertical: 4 },
+  terminalCard: { borderRadius: 9, borderLeftWidth: 3 },
+  neumorphicCard: { borderRadius: 21, shadowOpacity: 0.24, shadowRadius: 18 },
+  cyberCard: { borderRadius: 24, borderTopWidth: 2 },
+  terminalBody: { borderTopColor: "#FFFFFF22", borderBottomColor: "#FFFFFF22", paddingVertical: 9 },
+  spatialBody: { paddingVertical: 16, gap: 14 },
+  bentoActions: { gap: 5 },
+  neumorphicActions: { paddingTop: 4 },
 });

@@ -59,6 +59,17 @@ function formatPrice(product: Product) {
 export default function ProductsScreen() {
   const colors = useColors();
   const router = useRouter();
+  const themeCardStyle = colors.themeId === "bento-telemetry"
+    ? styles.bentoCard
+    : colors.themeId === "visionos-spatial"
+      ? styles.spatialCard
+      : colors.themeId === "cyberpunk-terminal"
+        ? styles.terminalCard
+        : colors.themeId === "neumorphic-luxe"
+          ? styles.neumorphicCard
+          : styles.cyberCard;
+  const themeTopStyle = colors.themeId === "visionos-spatial" ? styles.spatialTop : colors.themeId === "cyberpunk-terminal" ? styles.terminalTop : undefined;
+  const themeActionStyle = colors.themeId === "cyberpunk-terminal" ? styles.terminalActions : colors.themeId === "bento-telemetry" ? styles.bentoActions : undefined;
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -130,8 +141,8 @@ export default function ProductsScreen() {
   const renderProduct = ({ item }: { item: Product }) => {
     const primaryMedia = item.media?.[0];
     return (
-    <LuxuryCard compact style={styles.productCard}>
-      <View style={styles.productTop}>
+    <LuxuryCard compact style={[styles.productCard, themeCardStyle]}>
+      <View style={[styles.productTop, themeTopStyle]}>
         {primaryMedia?.type === "video" ? (
           <View style={[styles.productImage, styles.videoImage, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}35` }]}><Text style={[styles.videoMark, { color: colors.primary }]}>▶</Text><Text style={[styles.videoLabel, { color: colors.foreground }]}>Video</Text></View>
         ) : primaryMedia?.url || item.imageUrl ? (
@@ -155,7 +166,7 @@ export default function ProductsScreen() {
         <Text style={[styles.metaText, { color: colors.muted }]}>Stock {item.stockQuantity.toLocaleString("en-US")}</Text>
         <Text style={[styles.metaText, { color: item.stockQuantity > 0 ? colors.success : colors.error }]}>{item.stockQuantity > 0 ? "Available" : "Out of stock"}</Text>
       </View>
-      <View style={styles.productActions}>
+      <View style={[styles.productActions, themeActionStyle]}>
         <LuxuryButton label="Edit" onPress={() => router.push({ pathname: "/edit-product", params: { id: item.id } })} variant="secondary" style={styles.productAction} />
         <LuxuryButton label="Remove" onPress={() => handleDeleteProduct(item)} variant="danger" style={styles.productAction} />
       </View>
@@ -271,4 +282,13 @@ const styles = StyleSheet.create({
   emptyText: { textAlign: "center", fontSize: 12, lineHeight: 18 },
   emptyButton: { marginTop: 16, minWidth: 190 },
   footerLoading: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8, paddingVertical: 18 },
+  bentoCard: { borderRadius: 15 },
+  spatialCard: { borderRadius: 30, marginVertical: 4 },
+  terminalCard: { borderRadius: 9, borderLeftWidth: 3 },
+  neumorphicCard: { borderRadius: 21, shadowOpacity: 0.24, shadowRadius: 18 },
+  cyberCard: { borderRadius: 24, borderTopWidth: 2 },
+  spatialTop: { flexDirection: "column", alignItems: "center" },
+  terminalTop: { gap: 10 },
+  terminalActions: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#FFFFFF18", paddingTop: 10 },
+  bentoActions: { gap: 6 },
 });
