@@ -10,6 +10,8 @@ import {
   Text,
   TextInput,
   View,
+  type StyleProp,
+  type TextStyle,
 } from "react-native";
 import { useRouter } from "expo-router";
 
@@ -24,6 +26,35 @@ type SelectedMedia = PickedMedia & { id: string };
 function makeSku(title: string) {
   const slug = title.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 16) || "PIECE";
   return `HADX-${slug}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+}
+
+type ProductInputFieldProps = {
+  label: string;
+  value: string;
+  onChangeText: (value: string) => void;
+  colors: ReturnType<typeof useColors>;
+  fieldStyle?: StyleProp<TextStyle>;
+  keyboardType?: "default" | "numeric" | "decimal-pad";
+  multiline?: boolean;
+  placeholder?: string;
+};
+
+function ProductInputField({ label, value, onChangeText, colors, fieldStyle, keyboardType = "default", multiline = false, placeholder }: ProductInputFieldProps) {
+  return (
+    <View style={styles.inputGroup}>
+      <Text style={[styles.inputLabel, { color: colors.muted }]}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        multiline={multiline}
+        returnKeyType={multiline ? "default" : "done"}
+        placeholder={placeholder}
+        placeholderTextColor={`${colors.muted}B3`}
+        style={[styles.input, fieldStyle, { backgroundColor: `${colors.background}CC`, color: colors.foreground, borderColor: colors.border, minHeight: multiline ? 116 : 52 }]}
+      />
+    </View>
+  );
 }
 
 export default function AddProductScreen() {
@@ -109,16 +140,9 @@ export default function AddProductScreen() {
     }
   };
 
-  const InputField = ({ label, value, onChangeText, keyboardType = "default", multiline = false, placeholder }: { label: string; value: string; onChangeText: (value: string) => void; keyboardType?: "default" | "numeric" | "decimal-pad"; multiline?: boolean; placeholder?: string }) => (
-    <View style={styles.inputGroup}>
-      <Text style={[styles.inputLabel, { color: colors.muted }]}>{label}</Text>
-      <TextInput value={value} onChangeText={onChangeText} keyboardType={keyboardType} multiline={multiline} returnKeyType={multiline ? "default" : "done"} placeholder={placeholder} placeholderTextColor={`${colors.muted}B3`} style={[styles.input, fieldStyle, { backgroundColor: `${colors.background}CC`, color: colors.foreground, borderColor: colors.border, minHeight: multiline ? 116 : 52 }]} />
-    </View>
-  );
-
   return (
     <ScreenContainer edges={["top", "bottom", "left", "right"]} containerClassName="flex-1" className="flex-1">
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.content}>
         <View style={styles.topRow}><SectionHeading eyebrow="ATELIER / NEW PIECE" title="Create product" detail="Build the product once. Let the storefront do the selling." /><Pressable onPress={() => router.back()} style={({ pressed }) => [styles.closeButton, { borderColor: colors.border }, pressed && styles.closePressed]}><Text style={[styles.closeText, { color: colors.muted }]}>Close</Text></Pressable></View>
 
         <LuxuryCard accent style={[styles.mediaCard, formShellStyle]}>
@@ -130,7 +154,7 @@ export default function AddProductScreen() {
 
         <LuxuryCard style={[styles.formCard, formShellStyle]}>
           <Text style={[styles.formTitle, { color: colors.foreground }]}>Product identity</Text><Text style={[styles.formDetail, { color: colors.muted }]}>SKU means Stock Keeping Unit: the unique internal code for finding and managing this product. You can generate it automatically.</Text>
-          <View style={styles.formGap}><InputField label="Product title" value={form.title} onChangeText={(value) => updateForm("title", value)} placeholder="e.g. Obsidian Signature Tee" /><View style={styles.skuRow}><View style={styles.skuInput}><InputField label="SKU / internal product code" value={form.sku} onChangeText={(value) => updateForm("sku", value)} placeholder="HADX-OBSIDIAN-001" /></View><LuxuryButton label="Auto-generate" onPress={() => updateForm("sku", makeSku(form.title))} variant="ghost" style={styles.skuButton} disabled={loading} /></View><View style={styles.twoColumn}><View style={styles.column}><InputField label="USD (global base)" value={form.usdPrice} onChangeText={(value) => updateForm("usdPrice", value)} keyboardType="decimal-pad" placeholder="120" /></View><View style={styles.column}><InputField label="PKR (Pakistan)" value={form.pkrPrice} onChangeText={(value) => updateForm("pkrPrice", value)} keyboardType="decimal-pad" placeholder="35000" /></View></View><View style={styles.twoColumn}><View style={styles.column}><InputField label="INR (India)" value={form.inrPrice} onChangeText={(value) => updateForm("inrPrice", value)} keyboardType="decimal-pad" placeholder="10000" /></View><View style={styles.column}><InputField label="Stock quantity" value={form.stockQuantity} onChangeText={(value) => updateForm("stockQuantity", value)} keyboardType="numeric" placeholder="10" /></View></View><Text style={[styles.priceNote, { color: colors.muted }]}>These are owner-set regional prices. Customers see the correct one based on their selected/ detected region; prices are not silently guessed from exchange rates.</Text><InputField label="Category" value={form.category} onChangeText={(value) => updateForm("category", value)} placeholder="Atelier" /><InputField label="Description" value={form.description} onChangeText={(value) => updateForm("description", value)} multiline placeholder="Tell the story of this piece…" /></View>
+          <View style={styles.formGap}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Product title" value={form.title} onChangeText={(value) => updateForm("title", value)} placeholder="e.g. Obsidian Signature Tee" /><View style={styles.skuRow}><View style={styles.skuInput}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="SKU / internal product code" value={form.sku} onChangeText={(value) => updateForm("sku", value)} placeholder="HADX-OBSIDIAN-001" /></View><LuxuryButton label="Auto-generate" onPress={() => updateForm("sku", makeSku(form.title))} variant="ghost" style={styles.skuButton} disabled={loading} /></View><View style={styles.twoColumn}><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="USD (global base)" value={form.usdPrice} onChangeText={(value) => updateForm("usdPrice", value)} keyboardType="decimal-pad" placeholder="120" /></View><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="PKR (Pakistan)" value={form.pkrPrice} onChangeText={(value) => updateForm("pkrPrice", value)} keyboardType="decimal-pad" placeholder="35000" /></View></View><View style={styles.twoColumn}><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="INR (India)" value={form.inrPrice} onChangeText={(value) => updateForm("inrPrice", value)} keyboardType="decimal-pad" placeholder="10000" /></View><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Stock quantity" value={form.stockQuantity} onChangeText={(value) => updateForm("stockQuantity", value)} keyboardType="numeric" placeholder="10" /></View></View><Text style={[styles.priceNote, { color: colors.muted }]}>These are owner-set regional prices. Customers see the correct one based on their selected/ detected region; prices are not silently guessed from exchange rates.</Text><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Category" value={form.category} onChangeText={(value) => updateForm("category", value)} placeholder="Atelier" /><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Description" value={form.description} onChangeText={(value) => updateForm("description", value)} multiline placeholder="Tell the story of this piece…" /></View>
         </LuxuryCard>
         <View style={[styles.footerActions, actionLayoutStyle]}><LuxuryButton label="Save draft" onPress={() => void handleSave("DRAFT")} variant="secondary" loading={loading} style={styles.footerButton} /><LuxuryButton label="Publish live" onPress={() => void handleSave("PUBLISHED")} variant="primary" loading={loading} style={styles.footerButton} /></View>
       </ScrollView>

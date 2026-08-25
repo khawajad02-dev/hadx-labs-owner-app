@@ -200,8 +200,12 @@ export function LuxuryCard({
 }) {
   const colors = useColors();
   const id = accent ? "accentGlow" : "surfaceGlow";
-  const radius = colors.themeId === "bento-telemetry" ? 15 : colors.themeId === "visionos-spatial" ? 30 : colors.themeId === "cyberpunk-terminal" ? 9 : colors.themeId === "neumorphic-luxe" ? 21 : 24;
-  const contentPadding = colors.themeId === "bento-telemetry" ? 14 : colors.themeId === "visionos-spatial" ? 22 : colors.themeId === "cyberpunk-terminal" ? 12 : 18;
+  const isBento = colors.themeId === "bento-telemetry";
+  const isSpatial = colors.themeId === "visionos-spatial";
+  const isTerminal = colors.themeId === "cyberpunk-terminal";
+  const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const radius = isBento ? 15 : isSpatial ? 30 : isTerminal ? 9 : isNeumorphic ? 21 : 24;
+  const contentPadding = isBento ? 14 : isSpatial ? 22 : isTerminal ? 12 : isNeumorphic ? 20 : 18;
 
   return (
     <View
@@ -212,8 +216,12 @@ export function LuxuryCard({
           borderRadius: radius,
           backgroundColor: colors.surface,
           borderColor: accent ? colors.primary : colors.border,
+          borderWidth: isTerminal ? 1.4 : 1,
+          borderLeftWidth: isTerminal ? 3 : 1,
+          borderTopWidth: accent || (!isTerminal && colors.themeId === "hadx-cyber-luxury") ? 2 : 1,
           shadowColor: colors.primary,
-          shadowOpacity: accent ? colors.motion.glowOpacity * 0.18 : 0.12,
+          shadowOpacity: accent ? colors.motion.glowOpacity * 0.22 : isNeumorphic ? 0.24 : 0.12,
+          shadowRadius: isSpatial ? 30 : isNeumorphic ? 18 : 26,
         },
         style,
       ]}
@@ -253,7 +261,10 @@ export function LuxuryButton({
   labelStyle?: StyleProp<TextStyle>;
 }) {
   const colors = useColors();
-  const buttonRadius = colors.themeId === "bento-telemetry" ? 12 : colors.themeId === "visionos-spatial" ? 20 : colors.themeId === "cyberpunk-terminal" ? 7 : colors.themeId === "neumorphic-luxe" ? 22 : 16;
+  const isTerminal = colors.themeId === "cyberpunk-terminal";
+  const isSpatial = colors.themeId === "visionos-spatial";
+  const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const buttonRadius = colors.themeId === "bento-telemetry" ? 12 : isSpatial ? 20 : isTerminal ? 7 : isNeumorphic ? 22 : 16;
   const palette = {
     primary: { backgroundColor: colors.primary, borderColor: colors.primary, textColor: colors.background },
     secondary: { backgroundColor: colors.surface, borderColor: colors.border, textColor: colors.foreground },
@@ -273,14 +284,20 @@ export function LuxuryButton({
           borderRadius: buttonRadius,
           backgroundColor: palette.backgroundColor,
           borderColor: palette.borderColor,
+          borderWidth: isTerminal ? 1.5 : 1,
+          minHeight: isSpatial ? 54 : isTerminal ? 42 : 48,
+          shadowColor: colors.primary,
+          shadowOpacity: isNeumorphic && !disabled && !loading ? 0.24 : 0,
+          shadowRadius: isNeumorphic ? 10 : 0,
+          elevation: isNeumorphic ? 3 : 0,
           opacity: disabled || loading ? 0.55 : 1,
-          transform: [{ scale: pressed ? 0.97 : 1 }],
+          transform: [{ scale: pressed ? (isNeumorphic ? 0.94 : 0.97) : 1 }],
         },
         style,
       ]}
     >
       {icon ? <View style={styles.buttonIcon}>{icon}</View> : null}
-      <Text style={[styles.buttonLabel, { color: palette.textColor }, labelStyle]}>
+      <Text style={[styles.buttonLabel, { color: palette.textColor, textTransform: isTerminal ? "uppercase" : "none", letterSpacing: isTerminal ? 0.9 : 0.2 }, labelStyle]}>
         {loading ? "Working…" : label}
       </Text>
     </Pressable>
@@ -300,11 +317,12 @@ export function SectionHeading({
 }) {
   const colors = useColors();
   const headingSize = colors.themeId === "bento-telemetry" ? 23 : colors.themeId === "cyberpunk-terminal" ? 24 : colors.themeId === "visionos-spatial" ? 31 : 28;
+  const headingWeight = colors.themeId === "visionos-spatial" ? "700" : colors.themeId === "cyberpunk-terminal" ? "800" : "900";
   return (
     <View style={styles.headingRow}>
       <View style={styles.headingCopy}>
         {eyebrow ? <Text style={[styles.eyebrow, { color: colors.primary }]}>{eyebrow}</Text> : null}
-        <Text style={[styles.headingTitle, { color: colors.foreground, fontSize: headingSize }]}>{title}</Text>
+        <Text style={[styles.headingTitle, { color: colors.foreground, fontSize: headingSize, fontWeight: headingWeight, fontFamily: colors.themeId === "cyberpunk-terminal" ? "monospace" : undefined }]}>{title}</Text>
         {detail ? <Text style={[styles.headingDetail, { color: colors.muted }]}>{detail}</Text> : null}
       </View>
       {action ? <View>{action}</View> : null}
@@ -320,9 +338,10 @@ export function StatusPill({ label, tone = "neutral" }: { label: string; tone?: 
     danger: colors.error,
     neutral: colors.muted,
   }[tone];
+  const pillRadius = colors.themeId === "cyberpunk-terminal" ? 7 : colors.themeId === "bento-telemetry" ? 10 : 999;
 
   return (
-    <View style={[styles.statusPill, { backgroundColor: `${toneColor}18`, borderColor: `${toneColor}66` }]}>
+    <View style={[styles.statusPill, { backgroundColor: `${toneColor}18`, borderColor: `${toneColor}66`, borderRadius: pillRadius, paddingVertical: colors.themeId === "cyberpunk-terminal" ? 4 : 6 }]}>
       <View style={[styles.statusDot, { backgroundColor: toneColor }]} />
       <Text style={[styles.statusText, { color: toneColor }]}>{label}</Text>
     </View>
