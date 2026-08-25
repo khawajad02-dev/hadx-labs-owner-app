@@ -27,6 +27,11 @@ export async function uploadPickedMedia(media: PickedMedia) {
     contentType: mimeType,
   });
 
+  const fileInfo = await FileSystem.getInfoAsync(media.uri);
+  if (fileInfo.exists && fileInfo.size && fileInfo.size > 50 * 1024 * 1024) {
+    throw new Error("This media file is larger than 50 MB. Choose a smaller image or video.");
+  }
+
   const { signedUrl, publicUrl, path } = signedResponse.data as {
     signedUrl: string;
     publicUrl: string;
@@ -50,7 +55,8 @@ export async function uploadPickedMedia(media: PickedMedia) {
   });
 
   if (!uploadResponse.ok) {
-    throw new Error(`Media upload failed (${uploadResponse.status}).`);
+    const detail = (await uploadResponse.text()).replace(/\s+/g, " ").trim().slice(0, 160);
+    throw new Error(`Media upload failed (${uploadResponse.status})${detail ? `: ${detail}` : "."}`);
   }
 
   return { publicUrl, path, mimeType, type: media.type };

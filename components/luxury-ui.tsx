@@ -38,20 +38,93 @@ function ThemeBackdrop() {
     return () => loop.stop();
   }, [colors.motion.floatDuration, motion]);
 
-  const drift = motion.interpolate({ inputRange: [0, 1], outputRange: [-18, 18] });
-  const rotation = motion.interpolate({ inputRange: [0, 1], outputRange: ["-6deg", "6deg"] });
+  const drift = motion.interpolate({ inputRange: [0, 1], outputRange: [-22, 22] });
+  const rotation = motion.interpolate({ inputRange: [0, 1], outputRange: ["-8deg", "8deg"] });
+  const pulse = motion.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.06] });
+  const scan = motion.interpolate({ inputRange: [0, 1], outputRange: [-260, 260] });
   const isBento = colors.themeId === "bento-telemetry";
   const isSpatial = colors.themeId === "visionos-spatial";
   const isTerminal = colors.themeId === "cyberpunk-terminal";
   const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const isCyber = !isBento && !isSpatial && !isTerminal && !isNeumorphic;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-      {isBento || isTerminal ? <View style={styles.sceneGrid}>{Array.from({ length: 8 }).map((_, index) => <View key={`h-${index}`} style={[styles.gridHorizontal, { top: `${(index + 1) * 11}%`, borderColor: `${colors.primary}12` }]} />)}{Array.from({ length: 5 }).map((_, index) => <View key={`v-${index}`} style={[styles.gridVertical, { left: `${(index + 1) * 17}%`, borderColor: `${colors.primary}12` }]} />)}</View> : null}
-      {isSpatial ? <Animated.View style={[styles.spatialHalo, { backgroundColor: colors.primary, opacity: 0.09, transform: [{ translateX: drift }, { scale: 1.1 }] }]} /> : null}
-      {isNeumorphic ? <View style={[styles.neumorphicHalo, { backgroundColor: colors.surface, shadowColor: colors.primary }]} /> : null}
-      {isTerminal ? <Animated.View style={[styles.scanline, { backgroundColor: colors.primary, opacity: 0.18, transform: [{ translateY: drift }] }]} /> : null}
-      {!isBento && !isSpatial && !isTerminal && !isNeumorphic ? <Animated.View style={[styles.cyberHalo, { borderColor: `${colors.accent}35`, transform: [{ rotate: rotation }] }]} /> : null}
+      <Animated.View
+        style={[
+          styles.backdropArt,
+          {
+            opacity: 0.92,
+            transform: [{ translateX: drift }, { translateY: drift }, { scale: pulse }, ...(isCyber || isSpatial ? [{ rotate: rotation }] : [])],
+          },
+        ]}
+      >
+        <Svg width="100%" height="100%" viewBox="0 0 400 820" preserveAspectRatio="xMidYMid slice">
+          <Defs>
+            <RadialGradient id="themeGlow" cx="50%" cy="42%" r="72%">
+              <Stop offset="0%" stopColor={colors.primary} stopOpacity={0.16} />
+              <Stop offset="58%" stopColor={colors.accent} stopOpacity={0.04} />
+              <Stop offset="100%" stopColor={colors.background} stopOpacity={0} />
+            </RadialGradient>
+          </Defs>
+          <Rect x="0" y="0" width="400" height="820" fill={colors.background} opacity={0.01} />
+          <Rect x="0" y="0" width="400" height="820" fill="url(#themeGlow)" />
+
+          {isCyber ? (
+            <G fill="none" strokeLinecap="round">
+              <Circle cx="200" cy="405" r="268" stroke={colors.primary} strokeOpacity={0.14} strokeWidth="1" />
+              <Circle cx="200" cy="405" r="214" stroke={colors.accent} strokeOpacity={0.22} strokeWidth="1.4" strokeDasharray="2 12" />
+              <Circle cx="200" cy="405" r="132" stroke={colors.primary} strokeOpacity={0.16} strokeWidth="1" strokeDasharray="5 9" />
+              <Path d="M34 470 C102 278 278 245 366 405 C286 566 112 538 34 470Z" stroke={colors.accent} strokeOpacity={0.2} strokeWidth="1.2" />
+              <Path d="M72 210 C138 278 270 528 328 610" stroke={colors.primary} strokeOpacity={0.16} strokeWidth="1" />
+              <Path d="M54 610 C132 526 265 286 344 204" stroke={colors.accent} strokeOpacity={0.12} strokeWidth="1" />
+            </G>
+          ) : isBento ? (
+            <G>
+              <Rect x="22" y="80" width="164" height="136" rx="18" fill={colors.primary} opacity={0.11} stroke={colors.primary} strokeOpacity={0.28} />
+              <Rect x="202" y="80" width="176" height="78" rx="18" fill={colors.accent} opacity={0.08} stroke={colors.accent} strokeOpacity={0.25} />
+              <Rect x="202" y="176" width="82" height="140" rx="18" fill={colors.primary} opacity={0.07} stroke={colors.primary} strokeOpacity={0.24} />
+              <Rect x="300" y="176" width="78" height="140" rx="18" fill={colors.accent} opacity={0.06} stroke={colors.accent} strokeOpacity={0.2} />
+              <Rect x="22" y="342" width="356" height="92" rx="18" fill={colors.primary} opacity={0.07} stroke={colors.primary} strokeOpacity={0.22} />
+              <Rect x="22" y="462" width="112" height="214" rx="18" fill={colors.accent} opacity={0.06} stroke={colors.accent} strokeOpacity={0.2} />
+              <Rect x="152" y="462" width="226" height="96" rx="18" fill={colors.primary} opacity={0.07} stroke={colors.primary} strokeOpacity={0.22} />
+              <Rect x="152" y="584" width="226" height="92" rx="18" fill={colors.accent} opacity={0.05} stroke={colors.accent} strokeOpacity={0.18} />
+              <Path d="M34 255 H366 M34 270 H230 M34 286 H304" stroke={colors.primary} strokeOpacity={0.32} strokeWidth="2" strokeLinecap="round" />
+            </G>
+          ) : isSpatial ? (
+            <G fill="none" strokeLinecap="round">
+              <Circle cx="200" cy="410" r="270" stroke={colors.primary} strokeOpacity={0.15} strokeWidth="1" />
+              <Circle cx="200" cy="410" r="218" stroke={colors.accent} strokeOpacity={0.18} strokeWidth="1.2" />
+              <Circle cx="200" cy="410" r="148" stroke={colors.primary} strokeOpacity={0.2} strokeWidth="1.4" />
+              <Path d="M38 410 C118 212 294 212 362 410 C294 608 118 608 38 410Z" stroke={colors.accent} strokeOpacity={0.22} strokeWidth="1.4" />
+              <Path d="M200 138 C316 230 316 590 200 682 C84 590 84 230 200 138Z" stroke={colors.primary} strokeOpacity={0.14} strokeWidth="1" />
+              <Circle cx="105" cy="274" r="18" fill={colors.primary} fillOpacity={0.5} stroke={colors.accent} strokeOpacity={0.55} strokeWidth="1" />
+              <Circle cx="304" cy="542" r="26" fill={colors.accent} fillOpacity={0.3} stroke={colors.primary} strokeOpacity={0.4} strokeWidth="1" />
+            </G>
+          ) : isTerminal ? (
+            <G>
+              {Array.from({ length: 12 }).map((_, index) => (
+                <Rect key={`bar-${index}`} x={24 + index * 30} y={230 + (index % 4) * 42} width="12" height={90 + (index % 5) * 26} fill={colors.primary} opacity={0.08 + (index % 3) * 0.03} />
+              ))}
+              {Array.from({ length: 9 }).map((_, index) => (
+                <Path key={`term-line-${index}`} d={`M24 ${112 + index * 68} H376`} stroke={colors.primary} strokeOpacity={0.18} strokeWidth="1" strokeDasharray="3 8" />
+              ))}
+              <Path d="M24 686 H376 M24 700 H188 M24 714 H294" stroke={colors.accent} strokeOpacity={0.26} strokeWidth="2" strokeLinecap="round" />
+            </G>
+          ) : (
+            <G>
+              <Circle cx="200" cy="430" r="270" fill={colors.surface} opacity={0.28} />
+              <Circle cx="200" cy="430" r="218" fill={colors.primary} opacity={0.06} />
+              <Rect x="44" y="164" width="312" height="442" rx="48" fill="none" stroke={colors.accent} strokeOpacity={0.13} strokeWidth="2" />
+              <Rect x="74" y="202" width="252" height="366" rx="38" fill="none" stroke={colors.primary} strokeOpacity={0.11} strokeWidth="1" />
+              <Circle cx="96" cy="238" r="32" fill={colors.accent} opacity={0.1} />
+              <Circle cx="314" cy="598" r="54" fill={colors.primary} opacity={0.09} />
+              <Path d="M86 636 C148 596 250 596 314 636" fill="none" stroke={colors.accent} strokeOpacity={0.16} strokeWidth="2" />
+            </G>
+          )}
+        </Svg>
+      </Animated.View>
+      {isTerminal || isBento ? <Animated.View style={[styles.backdropScan, { backgroundColor: colors.primary, opacity: isTerminal ? 0.34 : 0.2, transform: [{ translateY: scan }] }]} /> : null}
     </View>
   );
 }
@@ -92,7 +165,7 @@ export function LuxuryScene({ children }: { children: ReactNode }) {
           styles.ambientOrb,
           {
             backgroundColor: colors.primary,
-            opacity: 0.08,
+            opacity: 0.14,
             transform: [{ translateX }, { translateY }, { scale: 1.05 }],
           },
         ]}
@@ -104,7 +177,7 @@ export function LuxuryScene({ children }: { children: ReactNode }) {
           styles.ambientOrbSmall,
           {
             backgroundColor: colors.accent,
-            opacity: 0.05,
+            opacity: 0.1,
             transform: [{ translateX: translateY }, { translateY: translateX }],
           },
         ]}
@@ -340,6 +413,8 @@ export function MiniSparkline({ values, color }: { values: number[]; color?: str
 const styles = StyleSheet.create({
   scene: { flex: 1, overflow: "hidden" },
   sceneGrid: { ...StyleSheet.absoluteFillObject },
+  backdropArt: { ...StyleSheet.absoluteFillObject },
+  backdropScan: { position: "absolute", left: 0, right: 0, top: "50%", height: 2 },
   gridHorizontal: { position: "absolute", left: 0, right: 0, borderTopWidth: 1 },
   gridVertical: { position: "absolute", top: 0, bottom: 0, borderLeftWidth: 1 },
   spatialHalo: { position: "absolute", width: 420, height: 420, borderRadius: 210, top: -180, right: -160 },
