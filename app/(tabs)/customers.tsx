@@ -32,6 +32,13 @@ function initials(name: string) {
 
 export default function CustomersScreen() {
   const colors = useColors();
+  const isBento = colors.themeId === "bento-telemetry";
+  const isSpatial = colors.themeId === "visionos-spatial";
+  const isTerminal = colors.themeId === "cyberpunk-terminal";
+  const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const customerCardStyle = isBento ? styles.bentoCard : isSpatial ? styles.spatialCard : isTerminal ? styles.terminalCard : isNeumorphic ? styles.neumorphicCard : styles.cyberCard;
+  const customerHeaderStyle = isSpatial ? styles.spatialHeader : isTerminal ? styles.terminalHeader : undefined;
+  const customerActionStyle = isTerminal ? styles.terminalActions : isBento ? styles.bentoActions : undefined;
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -78,8 +85,8 @@ export default function CustomersScreen() {
   };
 
   const renderCustomer = ({ item }: { item: Customer }) => (
-    <LuxuryCard compact style={styles.customerCard}>
-      <View style={styles.customerHeader}>
+    <LuxuryCard compact style={[styles.customerCard, customerCardStyle]}>
+      <View style={[styles.customerHeader, customerHeaderStyle]}>
         <View style={[styles.avatar, { backgroundColor: `${colors.primary}16`, borderColor: `${colors.primary}66` }]}>
           <Text style={[styles.avatarText, { color: colors.primary }]}>{initials(item.name)}</Text>
         </View>
@@ -89,12 +96,12 @@ export default function CustomersScreen() {
         </View>
         <StatusPill label={item.totalOrders > 4 ? "Collector" : "Client"} tone={item.totalOrders > 4 ? "success" : "neutral"} />
       </View>
-      <View style={styles.customerStats}>
+      <View style={[styles.customerStats, { borderColor: `${colors.border}88` }]}>
         <View><Text style={[styles.statLabel, { color: colors.muted }]}>Orders</Text><Text style={[styles.statValue, { color: colors.foreground }]}>{item.totalOrders.toLocaleString("en-US")}</Text></View>
         <View><Text style={[styles.statLabel, { color: colors.muted }]}>Lifetime value</Text><Text style={[styles.statValue, { color: colors.primary }]}>${Number(item.lifetimeValue || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</Text></View>
         <View><Text style={[styles.statLabel, { color: colors.muted }]}>Last order</Text><Text style={[styles.statValueSmall, { color: colors.foreground }]}>{item.lastOrderDate ? new Date(item.lastOrderDate).toLocaleDateString() : "—"}</Text></View>
       </View>
-      <View style={styles.actions}><LuxuryButton label="WhatsApp" onPress={() => void contact("whatsapp", item)} variant="ghost" style={styles.action} /><LuxuryButton label="Call" onPress={() => void contact("call", item)} variant="secondary" style={styles.action} /><LuxuryButton label="Email" onPress={() => void contact("email", item)} variant="secondary" style={styles.action} /></View>
+      <View style={[styles.actions, customerActionStyle]}><LuxuryButton label="WhatsApp" onPress={() => void contact("whatsapp", item)} variant="ghost" style={styles.action} /><LuxuryButton label="Call" onPress={() => void contact("call", item)} variant="secondary" style={styles.action} /><LuxuryButton label="Email" onPress={() => void contact("email", item)} variant="secondary" style={styles.action} /></View>
     </LuxuryCard>
   );
 
@@ -125,13 +132,13 @@ const styles = StyleSheet.create({
   customerCopy: { flex: 1, gap: 4 },
   customerName: { fontSize: 16, fontWeight: "900" },
   customerEmail: { fontSize: 11 },
-  customerStats: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "#FFFFFF12", paddingVertical: 12, gap: 8 },
+  customerStats: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 12, gap: 8 },
   statLabel: { fontSize: 10, marginBottom: 4 },
   statValue: { fontSize: 15, fontWeight: "900" },
   statValueSmall: { fontSize: 11, fontWeight: "800" },
   actions: { flexDirection: "row", gap: 7 },
   action: { flex: 1, minHeight: 40, paddingHorizontal: 5 },
-  errorCard: { borderColor: "#633A36" },
+  errorCard: { borderColor: "#B8655A" },
   errorTitle: { fontSize: 14, fontWeight: "900", marginBottom: 5 },
   errorText: { fontSize: 12, lineHeight: 18, marginBottom: 12 },
   retry: { alignSelf: "flex-start", minHeight: 40 },
@@ -140,4 +147,13 @@ const styles = StyleSheet.create({
   emptyMark: { fontSize: 40, fontWeight: "900", marginBottom: 8 },
   emptyTitle: { textAlign: "center", fontSize: 18, fontWeight: "900", lineHeight: 24 },
   emptyText: { textAlign: "center", fontSize: 12, lineHeight: 18 },
+  bentoCard: { borderRadius: 15, borderLeftWidth: 3 },
+  spatialCard: { borderRadius: 30, marginVertical: 4 },
+  terminalCard: { borderRadius: 9, borderLeftWidth: 3 },
+  neumorphicCard: { borderRadius: 22, shadowOpacity: 0.28, shadowRadius: 18 },
+  cyberCard: { borderRadius: 24, borderTopWidth: 2 },
+  spatialHeader: { flexDirection: "column", alignItems: "flex-start" },
+  terminalHeader: { alignItems: "flex-start" },
+  terminalActions: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10 },
+  bentoActions: { gap: 5 },
 });

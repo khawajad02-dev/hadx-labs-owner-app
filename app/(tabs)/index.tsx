@@ -112,7 +112,8 @@ export default function DashboardScreen() {
         </View>
 
         {error ? (
-          <LuxuryCard style={styles.alertCard}>
+          <LuxuryCard style={[styles.alertCard, { borderColor: `${colors.error}99` }]}>
+
             <View style={styles.alertHeader}>
               <View style={[styles.alertDot, { backgroundColor: colors.error }]} />
               <Text style={[styles.alertTitle, { color: colors.foreground }]}>Live feed paused</Text>
@@ -145,14 +146,14 @@ export default function DashboardScreen() {
         {isSpatial ? <LuxuryCard accent style={styles.spatialCard}><Text style={[styles.metricLabel, { color: colors.primary }]}>SPATIAL LAYER</Text><Text style={[styles.spatialTitle, { color: colors.foreground }]}>Your atelier, in focus.</Text><Text style={[styles.spatialDetail, { color: colors.muted }]}>Move from signal to action with generous, calm surfaces.</Text></LuxuryCard> : null}
         <SectionHeading eyebrow={isBento ? "BENTO SNAPSHOT" : "ATELIER SNAPSHOT"} title={isBento ? "Live modules" : "The essentials"} detail="Live counts from your store" />
         <View style={[styles.metricGrid, isBento && styles.bentoMetricGrid, isNeumorphic && styles.neumorphicMetricGrid]}>
-          <LuxuryCard compact style={styles.metricCard}>
+          <LuxuryCard compact style={[styles.metricCard, isTerminal ? styles.terminalMetricCard : isSpatial ? styles.spatialMetricCard : isBento ? styles.bentoMetricCard : isNeumorphic ? styles.neumorphicMetricCard : undefined]}>
             <Text style={[styles.metricLabel, { color: colors.muted }]}>Orders</Text>
             <Text style={[styles.metricValueLarge, { color: colors.primary }]}>
               {typeof metrics?.totalOrders === "number" ? metrics.totalOrders.toLocaleString("en-US") : "—"}
             </Text>
             <Text style={[styles.metricHint, { color: colors.muted }]}>All statuses</Text>
           </LuxuryCard>
-          <LuxuryCard compact style={styles.metricCard}>
+          <LuxuryCard compact style={[styles.metricCard, isTerminal ? styles.terminalMetricCard : isSpatial ? styles.spatialMetricCard : isBento ? styles.bentoMetricCard : isNeumorphic ? styles.neumorphicMetricCard : undefined]}>
             <Text style={[styles.metricLabel, { color: colors.muted }]}>Products</Text>
             <Text style={[styles.metricValueLarge, { color: colors.primary }]}>
               {typeof metrics?.totalProducts === "number" ? metrics.totalProducts.toLocaleString("en-US") : "—"}
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
   spatialCard: { minHeight: 142, justifyContent: "center" },
   spatialTitle: { fontSize: 24, fontWeight: "900", marginTop: 9, marginBottom: 5 },
   spatialDetail: { fontSize: 13, lineHeight: 20 },
-  alertCard: { borderColor: "#643B37" },
+  alertCard: { borderWidth: 1 },
   alertHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
   alertDot: { width: 8, height: 8, borderRadius: 4 },
   alertTitle: { fontSize: 15, fontWeight: "800" },
@@ -227,6 +228,10 @@ const styles = StyleSheet.create({
   sparklineWrap: { flex: 1, maxWidth: 170, height: 38 },
   metricGrid: { flexDirection: "row", gap: 12 },
   metricCard: { flex: 1, minHeight: 128 },
+  terminalMetricCard: { borderRadius: 9, borderLeftWidth: 3 },
+  spatialMetricCard: { borderRadius: 30, minHeight: 150, marginVertical: 4 },
+  bentoMetricCard: { borderRadius: 15 },
+  neumorphicMetricCard: { borderRadius: 22, shadowOpacity: 0.28, shadowRadius: 18 },
   metricValueLarge: { fontSize: 30, fontWeight: "900", marginTop: 10 },
   metricHint: { fontSize: 11, marginTop: 4 },
   actionGrid: { gap: 10 },

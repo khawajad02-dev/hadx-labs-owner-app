@@ -70,6 +70,9 @@ export default function ProductsScreen() {
           : styles.cyberCard;
   const themeTopStyle = colors.themeId === "visionos-spatial" ? styles.spatialTop : colors.themeId === "cyberpunk-terminal" ? styles.terminalTop : undefined;
   const themeActionStyle = colors.themeId === "cyberpunk-terminal" ? styles.terminalActions : colors.themeId === "bento-telemetry" ? styles.bentoActions : undefined;
+  const themeHeaderStyle = colors.themeId === "visionos-spatial" ? styles.spatialHeader : colors.themeId === "cyberpunk-terminal" ? styles.terminalHeader : colors.themeId === "bento-telemetry" ? styles.bentoHeader : undefined;
+  const themeFilterStyle = colors.themeId === "cyberpunk-terminal" ? styles.terminalFilters : colors.themeId === "visionos-spatial" ? styles.spatialFilters : undefined;
+  const themeEmptyStyle = colors.themeId === "visionos-spatial" ? styles.spatialEmpty : colors.themeId === "cyberpunk-terminal" ? styles.terminalEmpty : colors.themeId === "bento-telemetry" ? styles.bentoEmpty : colors.themeId === "neumorphic-luxe" ? styles.neumorphicEmpty : styles.cyberEmpty;
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -162,7 +165,8 @@ export default function ProductsScreen() {
           <Text style={[styles.mediaCount, { color: colors.muted }]}>{item.media?.length || (item.imageUrl ? 1 : 0)} media asset{(item.media?.length || (item.imageUrl ? 1 : 0)) === 1 ? "" : "s"}</Text>
         </View>
       </View>
-      <View style={styles.productMetaRow}>
+      <View style={[styles.productMetaRow, { borderTopColor: `${colors.border}88` }]}>
+
         <Text style={[styles.metaText, { color: colors.muted }]}>Stock {item.stockQuantity.toLocaleString("en-US")}</Text>
         <Text style={[styles.metaText, { color: item.stockQuantity > 0 ? colors.success : colors.error }]}>{item.stockQuantity > 0 ? "Available" : "Out of stock"}</Text>
       </View>
@@ -188,7 +192,7 @@ export default function ProductsScreen() {
         }}
         onEndReachedThreshold={0.35}
         ListHeaderComponent={
-          <View style={styles.headerContent}>
+          <View style={[styles.headerContent, themeHeaderStyle]}>
             <SectionHeading
               eyebrow="ATELIER / CATALOG"
               title="Products"
@@ -203,7 +207,7 @@ export default function ProductsScreen() {
               returnKeyType="search"
               style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
             />
-            <View style={styles.filterRow}>
+            <View style={[styles.filterRow, themeFilterStyle]}>
               {filters.map((filter) => {
                 const active = filter === status;
                 return (
@@ -219,7 +223,7 @@ export default function ProductsScreen() {
               })}
             </View>
             {error ? (
-              <LuxuryCard compact style={styles.errorCard}>
+              <LuxuryCard compact style={[styles.errorCard, { borderColor: `${colors.error}99` }]}>
                 <Text style={[styles.errorTitle, { color: colors.foreground }]}>Catalog feed paused</Text>
                 <Text style={[styles.errorText, { color: colors.muted }]}>{error}</Text>
                 <LuxuryButton label="Retry" onPress={() => void fetchProducts(1, false)} variant="ghost" style={styles.retryButton} />
@@ -231,7 +235,7 @@ export default function ProductsScreen() {
           loading ? (
             <View style={styles.emptyState}><ActivityIndicator size="large" color={colors.primary} /><Text style={[styles.emptyText, { color: colors.muted }]}>Opening the atelier…</Text></View>
           ) : (
-            <LuxuryCard accent style={styles.emptyCard}>
+            <LuxuryCard accent style={[styles.emptyCard, themeEmptyStyle]}>
               <Text style={[styles.emptyMark, { color: colors.primary }]}>H</Text>
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Your catalog is ready for its first piece.</Text>
               <Text style={[styles.emptyText, { color: colors.muted }]}>Choose a product image or video from your gallery and publish it without pasting a URL.</Text>
@@ -267,11 +271,11 @@ const styles = StyleSheet.create({
   productSku: { fontSize: 11 },
   productPrice: { fontSize: 12, fontWeight: "900", lineHeight: 18 },
   mediaCount: { fontSize: 10, fontWeight: "700" },
-  productMetaRow: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#FFFFFF12", paddingTop: 11 },
+  productMetaRow: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 11 },
   metaText: { fontSize: 11, fontWeight: "700" },
   productActions: { flexDirection: "row", gap: 9 },
   productAction: { flex: 1, minHeight: 42 },
-  errorCard: { borderColor: "#633A36" },
+  errorCard: { borderWidth: 1 },
   errorTitle: { fontSize: 14, fontWeight: "900", marginBottom: 5 },
   errorText: { fontSize: 12, lineHeight: 18, marginBottom: 12 },
   retryButton: { alignSelf: "flex-start", minHeight: 40 },
@@ -291,4 +295,14 @@ const styles = StyleSheet.create({
   terminalTop: { gap: 10 },
   terminalActions: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#FFFFFF18", paddingTop: 10 },
   bentoActions: { gap: 6 },
+  bentoHeader: { paddingBottom: 4 },
+  spatialHeader: { paddingHorizontal: 4 },
+  terminalHeader: { paddingLeft: 8, borderLeftWidth: 3, borderLeftColor: "#2C6B2A" },
+  terminalFilters: { borderLeftWidth: 3, borderLeftColor: "#2C6B2A", paddingLeft: 8 },
+  spatialFilters: { paddingHorizontal: 4 },
+  spatialEmpty: { borderRadius: 30, minHeight: 260, justifyContent: "center" },
+  terminalEmpty: { borderRadius: 9, borderLeftWidth: 3, alignItems: "flex-start" },
+  bentoEmpty: { borderRadius: 15, borderLeftWidth: 3 },
+  neumorphicEmpty: { borderRadius: 22, shadowOpacity: 0.28, shadowRadius: 18 },
+  cyberEmpty: { borderTopWidth: 2 },
 });

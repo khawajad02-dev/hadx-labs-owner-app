@@ -77,6 +77,9 @@ export default function OrdersScreen() {
           : styles.cyberCard;
   const themeBodyStyle = colors.themeId === "cyberpunk-terminal" ? styles.terminalBody : colors.themeId === "visionos-spatial" ? styles.spatialBody : undefined;
   const themeActionStyle = colors.themeId === "bento-telemetry" ? styles.bentoActions : colors.themeId === "neumorphic-luxe" ? styles.neumorphicActions : undefined;
+  const themeHeaderStyle = colors.themeId === "visionos-spatial" ? styles.spatialHeader : colors.themeId === "cyberpunk-terminal" ? styles.terminalHeader : colors.themeId === "bento-telemetry" ? styles.bentoHeader : undefined;
+  const themeFilterStyle = colors.themeId === "cyberpunk-terminal" ? styles.terminalFilters : colors.themeId === "visionos-spatial" ? styles.spatialFilters : undefined;
+  const themeEmptyStyle = colors.themeId === "visionos-spatial" ? styles.spatialEmpty : colors.themeId === "cyberpunk-terminal" ? styles.terminalEmpty : colors.themeId === "bento-telemetry" ? styles.bentoEmpty : colors.themeId === "neumorphic-luxe" ? styles.neumorphicEmpty : styles.cyberEmpty;
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<OrderFilter>("ALL");
@@ -155,7 +158,8 @@ export default function OrdersScreen() {
         </View>
         <StatusPill label={item.orderStatus} tone={toneForStatus(item.orderStatus)} />
       </View>
-      <View style={[styles.orderBody, themeBodyStyle]}>
+      <View style={[styles.orderBody, themeBodyStyle, { borderColor: `${colors.border}88` }]}>
+
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Piece</Text>
           <Text style={[styles.detailValue, { color: colors.foreground }]} numberOfLines={1}>{item.productTitle} × {item.quantity}</Text>
@@ -195,7 +199,7 @@ export default function OrdersScreen() {
         }}
         onEndReachedThreshold={0.3}
         ListHeaderComponent={
-          <View style={styles.headerContent}>
+          <View style={[styles.headerContent, themeHeaderStyle]}>
             <SectionHeading eyebrow="OPERATIONS / ORDER QUEUE" title="Orders" detail={`${total.toLocaleString("en-US")} orders across every status`} />
             <TextInput
               value={query}
@@ -205,7 +209,7 @@ export default function OrdersScreen() {
               returnKeyType="search"
               style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
             />
-            <View style={styles.filterRow}>
+            <View style={[styles.filterRow, themeFilterStyle]}>
               {FILTERS.map((item) => (
                 <LuxuryButton
                   key={item}
@@ -218,7 +222,8 @@ export default function OrdersScreen() {
               ))}
             </View>
             {error ? (
-              <LuxuryCard compact style={styles.errorCard}>
+              <LuxuryCard compact style={[styles.errorCard, { borderColor: `${colors.error}99` }]}>
+
                 <Text style={[styles.errorTitle, { color: colors.foreground }]}>Order feed paused</Text>
                 <Text style={[styles.errorText, { color: colors.muted }]}>{error}</Text>
                 <LuxuryButton label="Retry" onPress={() => void fetchOrders(false)} variant="ghost" style={styles.retryButton} />
@@ -230,7 +235,7 @@ export default function OrdersScreen() {
           loading ? (
             <View style={styles.emptyState}><ActivityIndicator size="large" color={colors.primary} /><Text style={[styles.emptyText, { color: colors.muted }]}>Opening secure order queue…</Text></View>
           ) : (
-            <LuxuryCard accent style={styles.emptyCard}>
+            <LuxuryCard accent style={[styles.emptyCard, themeEmptyStyle]}>
               <Text style={[styles.emptyMark, { color: colors.primary }]}>⌁</Text>
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No orders match this view.</Text>
               <Text style={[styles.emptyText, { color: colors.muted }]}>Try another status or search phrase. The queue is designed to keep loading as it grows.</Text>
@@ -255,14 +260,14 @@ const styles = StyleSheet.create({
   orderCopy: { flex: 1, gap: 4 },
   orderReference: { fontSize: 16, fontWeight: "900" },
   customerName: { fontSize: 12 },
-  orderBody: { gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "#FFFFFF12", paddingVertical: 12 },
+  orderBody: { gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 12 },
   detailRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
   detailLabel: { fontSize: 11, fontWeight: "700" },
   detailValue: { flex: 1, textAlign: "right", fontSize: 12, fontWeight: "700" },
   amount: { fontSize: 15, fontWeight: "900" },
   actionRow: { flexDirection: "row", gap: 7 },
   actionButton: { flex: 1, minHeight: 40, paddingHorizontal: 5 },
-  errorCard: { borderColor: "#633A36" },
+  errorCard: { borderWidth: 1 },
   errorTitle: { fontSize: 14, fontWeight: "900", marginBottom: 5 },
   errorText: { fontSize: 12, lineHeight: 18, marginBottom: 12 },
   retryButton: { alignSelf: "flex-start", minHeight: 40 },
@@ -281,4 +286,14 @@ const styles = StyleSheet.create({
   spatialBody: { paddingVertical: 16, gap: 14 },
   bentoActions: { gap: 5 },
   neumorphicActions: { paddingTop: 4 },
+  bentoHeader: { paddingBottom: 4 },
+  spatialHeader: { paddingHorizontal: 4 },
+  terminalHeader: { paddingLeft: 8, borderLeftWidth: 3, borderLeftColor: "#2C6B2A" },
+  terminalFilters: { borderLeftWidth: 3, borderLeftColor: "#2C6B2A", paddingLeft: 8 },
+  spatialFilters: { paddingHorizontal: 4 },
+  spatialEmpty: { borderRadius: 30, minHeight: 260, justifyContent: "center" },
+  terminalEmpty: { borderRadius: 9, borderLeftWidth: 3, alignItems: "flex-start" },
+  bentoEmpty: { borderRadius: 15, borderLeftWidth: 3 },
+  neumorphicEmpty: { borderRadius: 22, shadowOpacity: 0.28, shadowRadius: 18 },
+  cyberEmpty: { borderTopWidth: 2 },
 });

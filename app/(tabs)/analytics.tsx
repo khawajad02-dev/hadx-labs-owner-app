@@ -22,6 +22,12 @@ function formatCurrency(value: number | undefined) {
 
 export default function AnalyticsScreen() {
   const colors = useColors();
+  const isBento = colors.themeId === "bento-telemetry";
+  const isSpatial = colors.themeId === "visionos-spatial";
+  const isTerminal = colors.themeId === "cyberpunk-terminal";
+  const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const metricStyle = isBento ? styles.bentoMetric : isSpatial ? styles.spatialMetric : isTerminal ? styles.terminalMetric : isNeumorphic ? styles.neumorphicMetric : styles.cyberMetric;
+  const chartStyle = isBento ? styles.bentoChart : isSpatial ? styles.spatialChart : isTerminal ? styles.terminalChart : isNeumorphic ? styles.neumorphicChart : styles.cyberChart;
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [timeRange, setTimeRange] = useState<"daily" | "monthly">("monthly");
   const [loading, setLoading] = useState(true);
@@ -66,10 +72,10 @@ export default function AnalyticsScreen() {
         <SectionHeading eyebrow="TELEMETRY / PERFORMANCE" title="Insights" detail="A calm read of how the atelier is moving." action={<StatusPill label={analytics ? "Synced" : "Awaiting data"} tone={analytics ? "success" : "warning"} />} />
         {error ? <LuxuryCard style={styles.errorCard}><Text style={[styles.errorTitle, { color: colors.foreground }]}>Telemetry feed paused</Text><Text style={[styles.errorText, { color: colors.muted }]}>{error}</Text><LuxuryButton label="Retry" onPress={() => void fetchAnalytics()} variant="ghost" style={styles.retry} /></LuxuryCard> : null}
         <View style={styles.metricsRow}>
-          <LuxuryCard compact style={styles.metricCard}><Text style={[styles.metricLabel, { color: colors.muted }]}>Revenue</Text><Text style={[styles.metricValue, { color: colors.primary }]}>{formatCurrency(analytics?.totalRevenue)}</Text><Text style={[styles.metricHint, { color: colors.muted }]}>All time</Text></LuxuryCard>
-          <LuxuryCard compact style={styles.metricCard}><Text style={[styles.metricLabel, { color: colors.muted }]}>Avg. order</Text><Text style={[styles.metricValue, { color: colors.primary }]}>{formatCurrency(analytics?.averageOrderValue)}</Text><Text style={[styles.metricHint, { color: colors.muted }]}>Per order</Text></LuxuryCard>
+          <LuxuryCard compact style={[styles.metricCard, metricStyle]}><Text style={[styles.metricLabel, { color: colors.muted }]}>Revenue</Text><Text style={[styles.metricValue, { color: colors.primary }]}>{formatCurrency(analytics?.totalRevenue)}</Text><Text style={[styles.metricHint, { color: colors.muted }]}>All time</Text></LuxuryCard>
+          <LuxuryCard compact style={[styles.metricCard, metricStyle]}><Text style={[styles.metricLabel, { color: colors.muted }]}>Avg. order</Text><Text style={[styles.metricValue, { color: colors.primary }]}>{formatCurrency(analytics?.averageOrderValue)}</Text><Text style={[styles.metricHint, { color: colors.muted }]}>Per order</Text></LuxuryCard>
         </View>
-        <LuxuryCard accent style={styles.chartCard}>
+        <LuxuryCard accent style={[styles.chartCard, chartStyle]}>
           <View style={styles.chartHeader}><View><Text style={[styles.chartEyebrow, { color: colors.primary }]}>REVENUE ARC</Text><Text style={[styles.chartTitle, { color: colors.foreground }]}>{timeRange === "daily" ? "Daily movement" : "Monthly movement"}</Text></View><View style={styles.toggleRow}><LuxuryButton label="Day" onPress={() => setTimeRange("daily")} variant={timeRange === "daily" ? "primary" : "ghost"} style={styles.toggle} labelStyle={styles.toggleLabel} /><LuxuryButton label="Month" onPress={() => setTimeRange("monthly")} variant={timeRange === "monthly" ? "primary" : "ghost"} style={styles.toggle} labelStyle={styles.toggleLabel} /></View></View>
           <View style={styles.sparkline}><MiniSparkline values={sparklineValues} color={colors.accent} /></View>
           {revenueData.length > 0 ? <View style={styles.barList}>{revenueData.slice(-6).map((entry, index) => <View key={`${entry.label}-${index}`} style={styles.barRow}><Text style={[styles.barLabel, { color: colors.muted }]} numberOfLines={1}>{entry.label}</Text><View style={[styles.barTrack, { backgroundColor: `${colors.border}88` }]}><View style={[styles.barFill, { backgroundColor: colors.primary, width: `${Math.max(4, (entry.amount / maxRevenue) * 100)}%` }]} /></View><Text style={[styles.barValue, { color: colors.foreground }]}>{formatCurrency(entry.amount)}</Text></View>)}</View> : <Text style={[styles.emptyText, { color: colors.muted }]}>No revenue data has been recorded for this range.</Text>}
@@ -85,7 +91,7 @@ export default function AnalyticsScreen() {
 const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 120, gap: 16 },
   loadingText: { marginTop: 10, fontSize: 13 },
-  errorCard: { borderColor: "#633A36" },
+  errorCard: { borderColor: "#B8655A" },
   errorTitle: { fontSize: 15, fontWeight: "900", marginBottom: 5 },
   errorText: { fontSize: 12, lineHeight: 18, marginBottom: 12 },
   retry: { alignSelf: "flex-start", minHeight: 40 },
@@ -118,4 +124,14 @@ const styles = StyleSheet.create({
   rankNumber: { width: 25, fontSize: 11, fontWeight: "900" },
   rankName: { flex: 1, fontSize: 13, fontWeight: "800" },
   customerSpend: { fontSize: 13, fontWeight: "900" },
+  bentoMetric: { borderRadius: 15, minHeight: 96 },
+  spatialMetric: { borderRadius: 30, minHeight: 132, marginVertical: 4 },
+  terminalMetric: { borderRadius: 8, borderLeftWidth: 3, minHeight: 96 },
+  neumorphicMetric: { borderRadius: 22, shadowOpacity: 0.28, shadowRadius: 18 },
+  cyberMetric: { borderRadius: 24, borderTopWidth: 2 },
+  bentoChart: { borderRadius: 15 },
+  spatialChart: { borderRadius: 30, marginVertical: 4 },
+  terminalChart: { borderRadius: 8, borderLeftWidth: 3 },
+  neumorphicChart: { borderRadius: 22, shadowOpacity: 0.28 },
+  cyberChart: { borderRadius: 24, borderTopWidth: 2 },
 });

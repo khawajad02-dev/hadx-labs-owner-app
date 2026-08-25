@@ -107,7 +107,7 @@ export default function RootLayout() {
       <GestureHandlerRootView style={{ flex: 1 }}>
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
-          <Stack initialRouteName="security-vault" screenOptions={{ headerShown: false }}>
+          <Stack initialRouteName="security-vault" screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "transparent" } }}>
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="oauth/callback" />
             <Stack.Screen name="security-vault" />

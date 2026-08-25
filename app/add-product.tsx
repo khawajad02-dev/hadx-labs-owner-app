@@ -29,6 +29,9 @@ function makeSku(title: string) {
 export default function AddProductScreen() {
   const colors = useColors();
   const router = useRouter();
+  const formShellStyle = colors.themeId === "bento-telemetry" ? styles.bentoShell : colors.themeId === "visionos-spatial" ? styles.spatialShell : colors.themeId === "cyberpunk-terminal" ? styles.terminalShell : colors.themeId === "neumorphic-luxe" ? styles.neumorphicShell : styles.cyberShell;
+  const fieldStyle = colors.themeId === "bento-telemetry" ? styles.bentoField : colors.themeId === "visionos-spatial" ? styles.spatialField : colors.themeId === "cyberpunk-terminal" ? styles.terminalField : colors.themeId === "neumorphic-luxe" ? styles.neumorphicField : styles.cyberField;
+  const actionLayoutStyle = colors.themeId === "bento-telemetry" ? styles.bentoActions : colors.themeId === "visionos-spatial" ? styles.spatialActions : colors.themeId === "cyberpunk-terminal" ? styles.terminalActions : undefined;
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [media, setMedia] = useState<SelectedMedia[]>([]);
@@ -109,7 +112,7 @@ export default function AddProductScreen() {
   const InputField = ({ label, value, onChangeText, keyboardType = "default", multiline = false, placeholder }: { label: string; value: string; onChangeText: (value: string) => void; keyboardType?: "default" | "numeric" | "decimal-pad"; multiline?: boolean; placeholder?: string }) => (
     <View style={styles.inputGroup}>
       <Text style={[styles.inputLabel, { color: colors.muted }]}>{label}</Text>
-      <TextInput value={value} onChangeText={onChangeText} keyboardType={keyboardType} multiline={multiline} returnKeyType={multiline ? "default" : "done"} placeholder={placeholder} placeholderTextColor={`${colors.muted}B3`} style={[styles.input, { backgroundColor: `${colors.background}CC`, color: colors.foreground, borderColor: colors.border, minHeight: multiline ? 116 : 52 }]} />
+      <TextInput value={value} onChangeText={onChangeText} keyboardType={keyboardType} multiline={multiline} returnKeyType={multiline ? "default" : "done"} placeholder={placeholder} placeholderTextColor={`${colors.muted}B3`} style={[styles.input, fieldStyle, { backgroundColor: `${colors.background}CC`, color: colors.foreground, borderColor: colors.border, minHeight: multiline ? 116 : 52 }]} />
     </View>
   );
 
@@ -118,18 +121,18 @@ export default function AddProductScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.topRow}><SectionHeading eyebrow="ATELIER / NEW PIECE" title="Create product" detail="Build the product once. Let the storefront do the selling." /><Pressable onPress={() => router.back()} style={({ pressed }) => [styles.closeButton, { borderColor: colors.border }, pressed && styles.closePressed]}><Text style={[styles.closeText, { color: colors.muted }]}>Close</Text></Pressable></View>
 
-        <LuxuryCard accent style={styles.mediaCard}>
+        <LuxuryCard accent style={[styles.mediaCard, formShellStyle]}>
           <View style={styles.mediaHeader}><View style={styles.mediaCopy}><Text style={[styles.sectionEyebrow, { color: colors.primary }]}>MEDIA GALLERY</Text><Text style={[styles.mediaTitle, { color: colors.foreground }]}>Choose as many as you want</Text><Text style={[styles.mediaDetail, { color: colors.muted }]}>Images and videos from your phone gallery. No URL copying.</Text></View><StatusPill label={`${media.length} selected`} tone={media.length ? "success" : "neutral"} /></View>
           {media.length ? <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mediaStrip}>{media.map((item, index) => <View key={item.id} style={styles.mediaItem}>{item.type === "image" ? <Image source={{ uri: item.uri }} style={styles.mediaPreview} resizeMode="cover" /> : <View style={[styles.videoPreview, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}55` }]}><Text style={[styles.videoMark, { color: colors.primary }]}>▶</Text><Text style={[styles.videoText, { color: colors.foreground }]}>Video</Text></View>}<Pressable onPress={() => setMedia((previous) => previous.filter((selected) => selected.id !== item.id))} style={[styles.removeBadge, { backgroundColor: colors.background, borderColor: colors.border }]}><Text style={[styles.removeBadgeText, { color: colors.foreground }]}>×</Text></Pressable><Text style={[styles.mediaIndex, { color: colors.muted }]}>{index + 1}</Text></View>)}</ScrollView> : <View style={[styles.emptyMedia, { borderColor: colors.border }]}><Text style={[styles.emptyMediaMark, { color: colors.primary }]}>＋</Text><Text style={[styles.emptyMediaTitle, { color: colors.foreground }]}>Your gallery is empty for this piece</Text><Text style={[styles.mediaDetail, { color: colors.muted }]}>Tap below to choose photos or videos.</Text></View>}
           <View style={styles.mediaActions}><LuxuryButton label={media.length ? "Add more photos / videos" : "Open gallery"} onPress={pickMedia} variant="primary" style={styles.mediaButton} disabled={loading} />{media.length ? <LuxuryButton label="Clear all" onPress={() => setMedia([])} variant="ghost" style={styles.removeButton} disabled={loading} /> : null}</View>
           {uploadProgress ? <Text style={[styles.uploadProgress, { color: colors.primary }]}>{uploadProgress}</Text> : null}
         </LuxuryCard>
 
-        <LuxuryCard style={styles.formCard}>
+        <LuxuryCard style={[styles.formCard, formShellStyle]}>
           <Text style={[styles.formTitle, { color: colors.foreground }]}>Product identity</Text><Text style={[styles.formDetail, { color: colors.muted }]}>SKU means Stock Keeping Unit: the unique internal code for finding and managing this product. You can generate it automatically.</Text>
           <View style={styles.formGap}><InputField label="Product title" value={form.title} onChangeText={(value) => updateForm("title", value)} placeholder="e.g. Obsidian Signature Tee" /><View style={styles.skuRow}><View style={styles.skuInput}><InputField label="SKU / internal product code" value={form.sku} onChangeText={(value) => updateForm("sku", value)} placeholder="HADX-OBSIDIAN-001" /></View><LuxuryButton label="Auto-generate" onPress={() => updateForm("sku", makeSku(form.title))} variant="ghost" style={styles.skuButton} disabled={loading} /></View><View style={styles.twoColumn}><View style={styles.column}><InputField label="USD (global base)" value={form.usdPrice} onChangeText={(value) => updateForm("usdPrice", value)} keyboardType="decimal-pad" placeholder="120" /></View><View style={styles.column}><InputField label="PKR (Pakistan)" value={form.pkrPrice} onChangeText={(value) => updateForm("pkrPrice", value)} keyboardType="decimal-pad" placeholder="35000" /></View></View><View style={styles.twoColumn}><View style={styles.column}><InputField label="INR (India)" value={form.inrPrice} onChangeText={(value) => updateForm("inrPrice", value)} keyboardType="decimal-pad" placeholder="10000" /></View><View style={styles.column}><InputField label="Stock quantity" value={form.stockQuantity} onChangeText={(value) => updateForm("stockQuantity", value)} keyboardType="numeric" placeholder="10" /></View></View><Text style={[styles.priceNote, { color: colors.muted }]}>These are owner-set regional prices. Customers see the correct one based on their selected/ detected region; prices are not silently guessed from exchange rates.</Text><InputField label="Category" value={form.category} onChangeText={(value) => updateForm("category", value)} placeholder="Atelier" /><InputField label="Description" value={form.description} onChangeText={(value) => updateForm("description", value)} multiline placeholder="Tell the story of this piece…" /></View>
         </LuxuryCard>
-        <View style={styles.footerActions}><LuxuryButton label="Save draft" onPress={() => void handleSave("DRAFT")} variant="secondary" loading={loading} style={styles.footerButton} /><LuxuryButton label="Publish live" onPress={() => void handleSave("PUBLISHED")} variant="primary" loading={loading} style={styles.footerButton} /></View>
+        <View style={[styles.footerActions, actionLayoutStyle]}><LuxuryButton label="Save draft" onPress={() => void handleSave("DRAFT")} variant="secondary" loading={loading} style={styles.footerButton} /><LuxuryButton label="Publish live" onPress={() => void handleSave("PUBLISHED")} variant="primary" loading={loading} style={styles.footerButton} /></View>
       </ScrollView>
     </ScreenContainer>
   );
@@ -178,4 +181,17 @@ const styles = StyleSheet.create({
   priceNote: { fontSize: 11, lineHeight: 17, marginTop: -4 },
   footerActions: { flexDirection: "row", gap: 10 },
   footerButton: { flex: 1 },
+  bentoShell: { borderRadius: 15, borderLeftWidth: 3 },
+  spatialShell: { borderRadius: 30, marginVertical: 4 },
+  terminalShell: { borderRadius: 9, borderLeftWidth: 3 },
+  neumorphicShell: { borderRadius: 22, shadowOpacity: 0.28, shadowRadius: 18 },
+  cyberShell: { borderRadius: 24, borderTopWidth: 2 },
+  bentoField: { borderRadius: 10 },
+  spatialField: { borderRadius: 22, minHeight: 58 },
+  terminalField: { borderRadius: 6, fontFamily: "monospace" },
+  neumorphicField: { borderRadius: 20, shadowOpacity: 0.18, shadowRadius: 10 },
+  cyberField: { borderRadius: 14 },
+  bentoActions: { gap: 6 },
+  spatialActions: { gap: 14 },
+  terminalActions: { borderTopWidth: 2, borderTopColor: "#2C6B2A", paddingTop: 10 },
 });
