@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -21,6 +22,8 @@ const THEME_OPTIONS = Object.entries(THEME_CONFIGS).map(([id, config]) => ({
   id: id as ThemeType,
   ...config,
 }));
+
+const OWNER_APP_DOWNLOAD_URL = "https://github.com/khawajad02-dev/hadx-labs-owner-app/releases/latest";
 
 function PresetPreview({ themeId, selected }: { themeId: ThemeType; selected: boolean }) {
   const config = THEME_CONFIGS[themeId];
@@ -46,6 +49,15 @@ export default function SettingsScreen() {
     } catch (error) {
       console.error("Storefront open failed:", error);
       Alert.alert("Could not open storefront", "Please try again when the connection is restored.");
+    }
+  };
+
+  const openOwnerAppDownload = async () => {
+    try {
+      await Linking.openURL(OWNER_APP_DOWNLOAD_URL);
+    } catch (error) {
+      console.error("Owner App download page open failed:", error);
+      Alert.alert("Could not open install page", "Please scan the QR code again when the connection is restored.");
     }
   };
 
@@ -146,6 +158,16 @@ export default function SettingsScreen() {
           <LuxuryButton label="Open live storefront" onPress={() => void openStorefront()} variant="primary" style={styles.storeButton} />
         </LuxuryCard>
 
+        <SectionHeading eyebrow="DEVICE DISTRIBUTION" title="Install on another phone" detail="Scan this QR code to open the latest Owner App release." />
+        <LuxuryCard accent style={styles.qrCard}>
+          <View style={styles.qrFrame}>
+            <Image source={require("@/assets/images/owner-app-download-qr.png")} style={styles.qrImage} resizeMode="contain" accessibilityLabel="QR code for the latest HADX LABS Owner App release" />
+          </View>
+          <Text style={[styles.qrTitle, { color: colors.foreground }]}>HADX OWNER APP</Text>
+          <Text style={[styles.qrDetail, { color: colors.muted }]}>Scan with the other phone. Android will open the release page, where the APK can be downloaded and installed with the phone’s permission.</Text>
+          <LuxuryButton label="Open install page" onPress={() => void openOwnerAppDownload()} variant="secondary" style={styles.qrButton} />
+        </LuxuryCard>
+
         <SectionHeading eyebrow="DEVICE SECURITY" title="Session controls" detail="Your server secret never lives in this app." />
         <View style={styles.securityActions}>
           <LuxuryButton label="Request a new sign-in" onPress={handleResetSession} variant="secondary" />
@@ -190,6 +212,12 @@ const styles = StyleSheet.create({
   controlCopy: { flex: 1, gap: 5 },
   controlTitle: { fontSize: 15, fontWeight: "800" },
   controlDetail: { fontSize: 12, lineHeight: 18 },
+  qrCard: { alignItems: "center", paddingVertical: 20 },
+  qrFrame: { width: 206, height: 206, borderRadius: 24, padding: 9, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  qrImage: { width: 188, height: 188 },
+  qrTitle: { marginTop: 15, fontSize: 14, fontWeight: "900", letterSpacing: 1.8 },
+  qrDetail: { marginTop: 7, textAlign: "center", fontSize: 12, lineHeight: 18 },
+  qrButton: { marginTop: 15, minWidth: 190 },
   securityActions: { gap: 10 },
   infoEyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 2.2, marginBottom: 8 },
   infoTitle: { fontSize: 17, fontWeight: "900", marginBottom: 5 },
