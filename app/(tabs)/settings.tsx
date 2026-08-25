@@ -177,7 +177,7 @@ export default function SettingsScreen() {
         <LuxuryCard compact>
           <Text style={[styles.infoEyebrow, { color: colors.primary }]}>HADX LABS OWNER</Text>
           <Text style={[styles.infoTitle, { color: colors.foreground }]}>Luxury control, without the clutter.</Text>
-          <Text style={[styles.infoDetail, { color: colors.muted }]}>Version 1.2 · {colors.themeName}</Text>
+          <Text style={[styles.infoDetail, { color: colors.muted }]}>Version 1.2.1 · {colors.themeName}</Text>
         </LuxuryCard>
       </ScrollView>
     </ScreenContainer>
