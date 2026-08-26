@@ -16,6 +16,7 @@ import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/componen
 import { useColors } from "@/hooks/use-colors";
 import { OWNER_SESSION_KEY } from "@/constants/owner-api";
 import { THEME_CONFIGS, useThemeStore, type ThemeType } from "@/lib/stores/theme-store";
+import { getBiometricAvailability, usePrivacyStore } from "@/lib/stores/privacy-store";
 import { Linking } from "react-native";
 
 const THEME_OPTIONS = Object.entries(THEME_CONFIGS).map(([id, config]) => ({
@@ -43,6 +44,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   const router = useRouter();
   const { currentTheme, setTheme } = useThemeStore();
+  const { hasCredential, credentialKind, biometricEnabled, isRevealed, setBiometricEnabled, hideSensitive, lock, resetPrivacy } = usePrivacyStore();
   const openStorefront = async () => {
     try {
       await Linking.openURL("https://hadx-labs.vercel.app");
@@ -77,6 +79,35 @@ export default function SettingsScreen() {
           }
         },
       },
+    ]);
+  };
+
+  const handleBiometricToggle = async () => {
+    try {
+      if (!biometricEnabled) {
+        if (!(await getBiometricAvailability())) {
+          Alert.alert("Biometric not ready", "Enroll a fingerprint or face unlock in your phone settings first.");
+          return;
+        }
+        await setBiometricEnabled(true);
+      } else {
+        await setBiometricEnabled(false);
+      }
+    } catch (error) {
+      Alert.alert("Could not update biometric setting", error instanceof Error ? error.message : "Please try again.");
+    }
+  };
+
+  const handleRelock = () => {
+    hideSensitive();
+    lock();
+    Alert.alert("Private mode enabled", "The Owner App is locked. Use your saved pattern, password, or biometric to continue.");
+  };
+
+  const handleResetPrivacy = () => {
+    Alert.alert("Forget app lock?", "This removes the saved app credential from this device. You will create a new one next time. Your server session and store data remain unchanged.", [
+      { text: "Keep lock", style: "cancel" },
+      { text: "Forget app lock", style: "destructive", onPress: () => void resetPrivacy() },
     ]);
   };
 
@@ -168,7 +199,21 @@ export default function SettingsScreen() {
           <LuxuryButton label="Open install page" onPress={() => void openOwnerAppDownload()} variant="secondary" style={styles.qrButton} />
         </LuxuryCard>
 
-        <SectionHeading eyebrow="DEVICE SECURITY" title="Session controls" detail="Your server secret never lives in this app." />
+        <SectionHeading eyebrow="DEVICE SECURITY" title="Privacy lock" detail="Your server session and your local app lock are separate protections." />
+        <LuxuryCard accent style={styles.privacyCard}>
+          <View style={styles.securityHeader}>
+            <View style={styles.controlCopy}>
+              <Text style={[styles.controlTitle, { color: colors.foreground }]}>App {credentialKind === "pattern" ? "pattern" : "password"} saved</Text>
+              <Text style={[styles.controlDetail, { color: colors.muted }]}>{hasCredential ? "Sensitive products, clients, orders, and revenue stay masked until you authenticate." : "Set an app credential to protect the control room."}</Text>
+            </View>
+            <StatusPill label={isRevealed ? "Visible" : "Private"} tone={isRevealed ? "warning" : "success"} />
+          </View>
+          <View style={styles.securityActions}>
+            <LuxuryButton label={biometricEnabled ? "Disable fingerprint / face" : "Enable fingerprint / face"} onPress={() => void handleBiometricToggle()} variant="secondary" disabled={!hasCredential} />
+            <LuxuryButton label="Hide sensitive data" onPress={handleRelock} variant="ghost" disabled={!isRevealed} />
+            <LuxuryButton label="Forget app lock" onPress={handleResetPrivacy} variant="danger" disabled={!hasCredential} />
+          </View>
+        </LuxuryCard>
         <View style={styles.securityActions}>
           <LuxuryButton label="Request a new sign-in" onPress={handleResetSession} variant="secondary" />
           <LuxuryButton label="Log out this device" onPress={handleLogout} variant="danger" />
@@ -219,6 +264,8 @@ const styles = StyleSheet.create({
   qrDetail: { marginTop: 7, textAlign: "center", fontSize: 12, lineHeight: 18 },
   qrButton: { marginTop: 15, minWidth: 190 },
   securityActions: { gap: 10 },
+  privacyCard: { gap: 16 },
+  securityHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
   infoEyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 2.2, marginBottom: 8 },
   infoTitle: { fontSize: 17, fontWeight: "900", marginBottom: 5 },
   infoDetail: { fontSize: 12 },

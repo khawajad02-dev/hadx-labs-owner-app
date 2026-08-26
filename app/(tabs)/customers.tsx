@@ -14,6 +14,8 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/components/luxury-ui";
 import { useColors } from "@/hooks/use-colors";
+import { SensitiveValue } from "@/components/privacy-ui";
+import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { apiGet } from "@/lib/api-client";
 
 interface Customer {
@@ -44,6 +46,7 @@ export default function CustomersScreen() {
   const customerCardStyle = isBento ? styles.bentoCard : isSpatial ? styles.spatialCard : isTerminal ? styles.terminalCard : isNeumorphic ? styles.neumorphicCard : styles.cyberCard;
   const customerHeaderStyle = isSpatial ? styles.spatialHeader : isTerminal ? styles.terminalHeader : undefined;
   const customerActionStyle = isTerminal ? styles.terminalActions : isBento ? styles.bentoActions : undefined;
+  const isRevealed = usePrivacyStore((state) => state.isRevealed);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -93,25 +96,25 @@ export default function CustomersScreen() {
     <LuxuryCard compact style={[styles.customerCard, customerCardStyle]}>
       <View style={[styles.customerHeader, customerHeaderStyle]}>
         <View style={[styles.avatar, { backgroundColor: `${colors.primary}16`, borderColor: `${colors.primary}66` }]}>
-          <Text style={[styles.avatarText, { color: colors.primary }]}>{initials(item.name)}</Text>
+          <Text style={[styles.avatarText, { color: colors.primary }]}>{isRevealed ? initials(item.name) : "•"}</Text>
         </View>
         <View style={styles.customerCopy}>
-          <Text style={[styles.customerName, { color: colors.foreground }]}>{item.name}</Text>
-          <Text style={[styles.customerEmail, { color: colors.muted }]} numberOfLines={1}>{item.email}</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.customerName, { color: colors.foreground }]}>{item.name}</SensitiveValue>
+          <SensitiveValue revealed={isRevealed} style={[styles.customerEmail, { color: colors.muted }]}>{item.email}</SensitiveValue>
         </View>
         <StatusPill label={item.totalOrders > 4 ? "Collector" : "Client"} tone={item.totalOrders > 4 ? "success" : "neutral"} />
       </View>
       <View style={[styles.deliveryBlock, { borderColor: `${colors.border}88`, backgroundColor: `${colors.surface}99` }]}>
         <Text style={[styles.deliveryTitle, { color: colors.primary }]}>LATEST DELIVERY</Text>
-        <Text style={[styles.deliveryText, { color: colors.foreground }]}>{item.latestProductTitle || "No product recorded"}{item.latestSize ? ` · Size ${item.latestSize}` : ""}</Text>
-        <Text style={[styles.deliveryText, { color: colors.muted }]}>{item.address || "Address not recorded"}{item.city ? `, ${item.city}` : ""}{item.country ? `, ${item.country}` : ""}</Text>
+        <SensitiveValue revealed={isRevealed} style={[styles.deliveryText, { color: colors.foreground }]}>{item.latestProductTitle || "No product recorded"}{item.latestSize ? ` · Size ${item.latestSize}` : ""}</SensitiveValue>
+        <SensitiveValue revealed={isRevealed} style={[styles.deliveryText, { color: colors.muted }]}>{item.address || "Address not recorded"}{item.city ? `, ${item.city}` : ""}{item.country ? `, ${item.country}` : ""}</SensitiveValue>
       </View>
       <View style={[styles.customerStats, { borderColor: `${colors.border}88` }]}>
-        <View><Text style={[styles.statLabel, { color: colors.muted }]}>Orders</Text><Text style={[styles.statValue, { color: colors.foreground }]}>{item.totalOrders.toLocaleString("en-US")}</Text></View>
-        <View><Text style={[styles.statLabel, { color: colors.muted }]}>Lifetime value</Text><Text style={[styles.statValue, { color: colors.primary }]}>${Number(item.lifetimeValue || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</Text></View>
-        <View><Text style={[styles.statLabel, { color: colors.muted }]}>Last order</Text><Text style={[styles.statValueSmall, { color: colors.foreground }]}>{item.lastOrderDate ? new Date(item.lastOrderDate).toLocaleDateString() : "—"}</Text></View>
+        <View><Text style={[styles.statLabel, { color: colors.muted }]}>Orders</Text><SensitiveValue revealed={isRevealed} style={[styles.statValue, { color: colors.foreground }]}>{item.totalOrders.toLocaleString("en-US")}</SensitiveValue></View>
+        <View><Text style={[styles.statLabel, { color: colors.muted }]}>Lifetime value</Text><SensitiveValue revealed={isRevealed} style={[styles.statValue, { color: colors.primary }]}>${Number(item.lifetimeValue || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</SensitiveValue></View>
+        <View><Text style={[styles.statLabel, { color: colors.muted }]}>Last order</Text><SensitiveValue revealed={isRevealed} style={[styles.statValueSmall, { color: colors.foreground }]}>{item.lastOrderDate ? new Date(item.lastOrderDate).toLocaleDateString() : "—"}</SensitiveValue></View>
       </View>
-      <View style={[styles.actions, customerActionStyle]}><LuxuryButton label="WhatsApp" onPress={() => void contact("whatsapp", item)} variant="ghost" style={styles.action} /><LuxuryButton label="Call" onPress={() => void contact("call", item)} variant="secondary" style={styles.action} /><LuxuryButton label="Email" onPress={() => void contact("email", item)} variant="secondary" style={styles.action} /></View>
+      <View style={[styles.actions, customerActionStyle]}><LuxuryButton label="WhatsApp" onPress={() => void contact("whatsapp", item)} variant="ghost" disabled={!isRevealed} style={styles.action} /><LuxuryButton label="Call" onPress={() => void contact("call", item)} variant="secondary" disabled={!isRevealed} style={styles.action} /><LuxuryButton label="Email" onPress={() => void contact("email", item)} variant="secondary" disabled={!isRevealed} style={styles.action} /></View>
     </LuxuryCard>
   );
 
@@ -124,7 +127,7 @@ export default function CustomersScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void fetchCustomers(); }} tintColor={colors.primary} colors={[colors.primary]} />}
-        ListHeaderComponent={<View style={styles.headerContent}><SectionHeading eyebrow="RELATIONSHIPS / CLIENT LEDGER" title="Clients" detail={`${visibleCustomers.length.toLocaleString("en-US")} of ${customers.length.toLocaleString("en-US")} clients`} /><TextInput value={query} onChangeText={setQuery} placeholder="Search clients, email or phone" placeholderTextColor={`${colors.muted}B3`} returnKeyType="search" style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]} />{error ? <LuxuryCard compact style={styles.errorCard}><Text style={[styles.errorTitle, { color: colors.foreground }]}>Client feed paused</Text><Text style={[styles.errorText, { color: colors.muted }]}>{error}</Text><LuxuryButton label="Retry" onPress={() => void fetchCustomers()} variant="ghost" style={styles.retry} /></LuxuryCard> : null}</View>}
+        ListHeaderComponent={<View style={styles.headerContent}><SectionHeading eyebrow="RELATIONSHIPS / CLIENT LEDGER" title="Clients" detail={isRevealed ? `${visibleCustomers.length.toLocaleString("en-US")} of ${customers.length.toLocaleString("en-US")} clients` : "•••• of •••• clients"} /><TextInput value={query} onChangeText={setQuery} placeholder="Search clients, email or phone" placeholderTextColor={`${colors.muted}B3`} returnKeyType="search" style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]} />{error ? <LuxuryCard compact style={styles.errorCard}><Text style={[styles.errorTitle, { color: colors.foreground }]}>Client feed paused</Text><Text style={[styles.errorText, { color: colors.muted }]}>{error}</Text><LuxuryButton label="Retry" onPress={() => void fetchCustomers()} variant="ghost" style={styles.retry} /></LuxuryCard> : null}</View>}
         ListEmptyComponent={loading ? <View style={styles.empty}><ActivityIndicator size="large" color={colors.primary} /><Text style={[styles.emptyText, { color: colors.muted }]}>Opening client ledger…</Text></View> : <LuxuryCard accent style={styles.emptyCard}><Text style={[styles.emptyMark, { color: colors.primary }]}>H</Text><Text style={[styles.emptyTitle, { color: colors.foreground }]}>No clients in this view.</Text><Text style={[styles.emptyText, { color: colors.muted }]}>As orders arrive, customer relationships will appear here.</Text></LuxuryCard>}
       />
     </ScreenContainer>

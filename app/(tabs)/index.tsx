@@ -18,6 +18,8 @@ import {
   SectionHeading,
   StatusPill,
 } from "@/components/luxury-ui";
+import { PrivacyEyeButton, SensitiveValue } from "@/components/privacy-ui";
+import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { useColors } from "@/hooks/use-colors";
 import { apiGet } from "@/lib/api-client";
 
@@ -50,6 +52,7 @@ export default function DashboardScreen() {
   const isSpatial = colors.themeId === "visionos-spatial";
   const isTerminal = colors.themeId === "cyberpunk-terminal";
   const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const isRevealed = usePrivacyStore((state) => state.isRevealed);
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -101,6 +104,7 @@ export default function DashboardScreen() {
           </View>
           <View style={[styles.orbDock, { borderColor: `${colors.primary}55` }]}>
             <CyberOrb size={82} />
+            <PrivacyEyeButton />
           </View>
         </View>
 
@@ -126,15 +130,15 @@ export default function DashboardScreen() {
         <LuxuryCard accent style={styles.heroCard}>
           <SectionHeading
             eyebrow="TODAY / PERFORMANCE"
-            title={metrics ? formatCurrency(metrics.revenueToday) : "—"}
+            title={metrics ? (isRevealed ? formatCurrency(metrics.revenueToday) : "••••••") : "—"}
             detail="Revenue captured today"
           />
           <View style={styles.heroLowerRow}>
             <View style={styles.heroMeta}>
               <Text style={[styles.metricLabel, { color: colors.muted }]}>Active customers</Text>
-              <Text style={[styles.metricValue, { color: colors.foreground }]}>
+              <SensitiveValue revealed={isRevealed} style={[styles.metricValue, { color: colors.foreground }]}>
                 {typeof metrics?.activeUsers === "number" ? metrics.activeUsers.toLocaleString("en-US") : "—"}
-              </Text>
+              </SensitiveValue>
             </View>
             <View style={styles.sparklineWrap}>
               <MiniSparkline values={metrics ? [18, 24, 20, 31, 28, 38, 44] : [0, 0, 0, 0, 0, 0, 0]} color={colors.accent} />
@@ -148,16 +152,16 @@ export default function DashboardScreen() {
         <View style={[styles.metricGrid, isBento && styles.bentoMetricGrid, isNeumorphic && styles.neumorphicMetricGrid]}>
           <LuxuryCard compact style={[styles.metricCard, isTerminal ? styles.terminalMetricCard : isSpatial ? styles.spatialMetricCard : isBento ? styles.bentoMetricCard : isNeumorphic ? styles.neumorphicMetricCard : undefined]}>
             <Text style={[styles.metricLabel, { color: colors.muted }]}>Orders</Text>
-            <Text style={[styles.metricValueLarge, { color: colors.primary }]}>
+            <SensitiveValue revealed={isRevealed} style={[styles.metricValueLarge, { color: colors.primary }]}>
               {typeof metrics?.totalOrders === "number" ? metrics.totalOrders.toLocaleString("en-US") : "—"}
-            </Text>
+            </SensitiveValue>
             <Text style={[styles.metricHint, { color: colors.muted }]}>All statuses</Text>
           </LuxuryCard>
           <LuxuryCard compact style={[styles.metricCard, isTerminal ? styles.terminalMetricCard : isSpatial ? styles.spatialMetricCard : isBento ? styles.bentoMetricCard : isNeumorphic ? styles.neumorphicMetricCard : undefined]}>
             <Text style={[styles.metricLabel, { color: colors.muted }]}>Products</Text>
-            <Text style={[styles.metricValueLarge, { color: colors.primary }]}>
+            <SensitiveValue revealed={isRevealed} style={[styles.metricValueLarge, { color: colors.primary }]}>
               {typeof metrics?.totalProducts === "number" ? metrics.totalProducts.toLocaleString("en-US") : "—"}
-            </Text>
+            </SensitiveValue>
             <Text style={[styles.metricHint, { color: colors.muted }]}>Your catalog</Text>
           </LuxuryCard>
         </View>
@@ -203,7 +207,7 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 10, fontWeight: "900", letterSpacing: 2.5 },
   title: { fontSize: 32, fontWeight: "900", letterSpacing: -0.8 },
   subtitle: { fontSize: 14, lineHeight: 20 },
-  orbDock: { width: 92, height: 92, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 46 },
+  orbDock: { position: "relative", width: 92, height: 92, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 46 },
   statusRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   terminalStatusRow: { paddingBottom: 2 },
   bentoMetricGrid: { flexWrap: "wrap" },

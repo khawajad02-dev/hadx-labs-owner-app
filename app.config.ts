@@ -88,6 +88,12 @@ const config: ExpoConfig = {
   plugins: [
     "expo-router",
     [
+      "expo-local-authentication",
+      {
+        faceIDPermission: "Allow $(PRODUCT_NAME) to use Face ID to unlock your private HADX Owner App data.",
+      },
+    ],
+    [
       "expo-audio",
       {
         microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone.",

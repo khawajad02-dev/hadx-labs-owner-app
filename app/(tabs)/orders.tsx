@@ -14,6 +14,8 @@ import {
 import { ScreenContainer } from "@/components/screen-container";
 import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/components/luxury-ui";
 import { useColors } from "@/hooks/use-colors";
+import { SensitiveValue } from "@/components/privacy-ui";
+import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { apiDelete, apiGet, apiPut } from "@/lib/api-client";
 
 interface Order {
@@ -83,6 +85,7 @@ export default function OrdersScreen() {
   const themeHeaderStyle = colors.themeId === "visionos-spatial" ? styles.spatialHeader : colors.themeId === "cyberpunk-terminal" ? styles.terminalHeader : colors.themeId === "bento-telemetry" ? styles.bentoHeader : undefined;
   const themeFilterStyle = colors.themeId === "cyberpunk-terminal" ? styles.terminalFilters : colors.themeId === "visionos-spatial" ? styles.spatialFilters : undefined;
   const themeEmptyStyle = colors.themeId === "visionos-spatial" ? styles.spatialEmpty : colors.themeId === "cyberpunk-terminal" ? styles.terminalEmpty : colors.themeId === "bento-telemetry" ? styles.bentoEmpty : colors.themeId === "neumorphic-luxe" ? styles.neumorphicEmpty : styles.cyberEmpty;
+  const isRevealed = usePrivacyStore((state) => state.isRevealed);
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [filter, setFilter] = useState<OrderFilter>("ALL");
@@ -181,7 +184,7 @@ export default function OrdersScreen() {
       <View style={styles.orderHeader}>
         <View style={styles.orderCopy}>
           <Text style={[styles.orderReference, { color: colors.foreground }]}>{item.orderReference}</Text>
-          <Text style={[styles.customerName, { color: colors.muted }]}>{item.fullName}</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.customerName, { color: colors.muted }]}>{item.fullName}</SensitiveValue>
         </View>
         <StatusPill label={item.orderStatus} tone={toneForStatus(item.orderStatus)} />
       </View>
@@ -189,36 +192,36 @@ export default function OrdersScreen() {
 
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Piece</Text>
-          <Text style={[styles.detailValue, { color: colors.foreground }]} numberOfLines={1}>{item.productTitle} × {item.quantity}</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.detailValue, { color: colors.foreground }]}>{item.productTitle} × {item.quantity}</SensitiveValue>
         </View>
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Size</Text>
-          <Text style={[styles.detailValue, { color: colors.foreground }]}>{item.size || "Not recorded"}</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.detailValue, { color: colors.foreground }]}>{item.size || "Not recorded"}</SensitiveValue>
         </View>
         <View style={[styles.customerDetails, { borderColor: `${colors.border}88`, backgroundColor: `${colors.surface}99` }]}>
           <Text style={[styles.customerDetailsTitle, { color: colors.primary }]}>DELIVERY DETAILS</Text>
-          <Text style={[styles.customerDetailsText, { color: colors.foreground }]}>{item.email}</Text>
-          <Text style={[styles.customerDetailsText, { color: colors.foreground }]}>{item.phone}</Text>
-          <Text style={[styles.customerDetailsText, { color: colors.foreground }]}>{item.address}</Text>
-          <Text style={[styles.customerDetailsText, { color: colors.foreground }]}>{[item.city, item.country].filter(Boolean).join(", ") || "City/country not recorded"}</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.customerDetailsText, { color: colors.foreground }]}>{item.email}</SensitiveValue>
+          <SensitiveValue revealed={isRevealed} style={[styles.customerDetailsText, { color: colors.foreground }]}>{item.phone}</SensitiveValue>
+          <SensitiveValue revealed={isRevealed} style={[styles.customerDetailsText, { color: colors.foreground }]}>{item.address}</SensitiveValue>
+          <SensitiveValue revealed={isRevealed} style={[styles.customerDetailsText, { color: colors.foreground }]}>{[item.city, item.country].filter(Boolean).join(", ") || "City/country not recorded"}</SensitiveValue>
         </View>
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Value</Text>
-          <Text style={[styles.amount, { color: colors.primary }]}>{formatAmount(item)}</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.amount, { color: colors.primary }]}>{formatAmount(item)}</SensitiveValue>
         </View>
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Payment</Text>
-          <StatusPill label={item.paymentStatus.replaceAll("_", " ")} tone={toneForStatus(item.paymentStatus)} />
+          {isRevealed ? <StatusPill label={item.paymentStatus.replaceAll("_", " ")} tone={toneForStatus(item.paymentStatus)} /> : <SensitiveValue revealed={false} style={[styles.detailValue, { color: colors.muted }]}>Private payment</SensitiveValue>}
         </View>
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Placed</Text>
-          <Text style={[styles.detailValue, { color: colors.foreground }]}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.detailValue, { color: colors.foreground }]}>{new Date(item.createdAt).toLocaleDateString()}</SensitiveValue>
         </View>
       </View>
       <View style={[styles.actionRow, themeActionStyle]}>
         {item.orderStatus === "RESERVED" ? <LuxuryButton label="Confirm" onPress={() => void updateOrderStatus(item.id, "CONFIRMED")} variant="primary" style={styles.actionButton} /> : null}
         {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item.id, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
-        <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" style={styles.actionButton} />
+        <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" disabled={!isRevealed} style={styles.actionButton} />
         {item.orderStatus === "CANCELLED" || item.orderStatus === "EXPIRED" ? <LuxuryButton label="Delete test" onPress={() => deleteCancelledTestOrder(item)} variant="danger" style={styles.actionButton} /> : null}
       </View>
     </LuxuryCard>
@@ -239,7 +242,7 @@ export default function OrdersScreen() {
         onEndReachedThreshold={0.3}
         ListHeaderComponent={
           <View style={[styles.headerContent, themeHeaderStyle]}>
-            <SectionHeading eyebrow="OPERATIONS / ORDER QUEUE" title="Orders" detail={`${total.toLocaleString("en-US")} orders across every status`} />
+            <SectionHeading eyebrow="OPERATIONS / ORDER QUEUE" title="Orders" detail={isRevealed ? `${total.toLocaleString("en-US")} orders across every status` : "•••• orders across every status"} />
             <TextInput
               value={query}
               onChangeText={setQuery}

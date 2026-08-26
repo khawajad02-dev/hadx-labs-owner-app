@@ -4,6 +4,8 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View }
 import { ScreenContainer } from "@/components/screen-container";
 import { LuxuryButton, LuxuryCard, MiniSparkline, SectionHeading, StatusPill } from "@/components/luxury-ui";
 import { useColors } from "@/hooks/use-colors";
+import { SensitiveValue } from "@/components/privacy-ui";
+import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { apiGet } from "@/lib/api-client";
 
 interface AnalyticsData {
@@ -26,6 +28,7 @@ export default function AnalyticsScreen() {
   const isSpatial = colors.themeId === "visionos-spatial";
   const isTerminal = colors.themeId === "cyberpunk-terminal";
   const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const isRevealed = usePrivacyStore((state) => state.isRevealed);
   const metricStyle = isBento ? styles.bentoMetric : isSpatial ? styles.spatialMetric : isTerminal ? styles.terminalMetric : isNeumorphic ? styles.neumorphicMetric : styles.cyberMetric;
   const chartStyle = isBento ? styles.bentoChart : isSpatial ? styles.spatialChart : isTerminal ? styles.terminalChart : isNeumorphic ? styles.neumorphicChart : styles.cyberChart;
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
@@ -72,17 +75,17 @@ export default function AnalyticsScreen() {
         <SectionHeading eyebrow="TELEMETRY / PERFORMANCE" title="Insights" detail="A calm read of how the atelier is moving." action={<StatusPill label={analytics ? "Synced" : "Awaiting data"} tone={analytics ? "success" : "warning"} />} />
         {error ? <LuxuryCard style={styles.errorCard}><Text style={[styles.errorTitle, { color: colors.foreground }]}>Telemetry feed paused</Text><Text style={[styles.errorText, { color: colors.muted }]}>{error}</Text><LuxuryButton label="Retry" onPress={() => void fetchAnalytics()} variant="ghost" style={styles.retry} /></LuxuryCard> : null}
         <View style={styles.metricsRow}>
-          <LuxuryCard compact style={[styles.metricCard, metricStyle]}><Text style={[styles.metricLabel, { color: colors.muted }]}>Revenue</Text><Text style={[styles.metricValue, { color: colors.primary }]}>{formatCurrency(analytics?.totalRevenue)}</Text><Text style={[styles.metricHint, { color: colors.muted }]}>All time</Text></LuxuryCard>
-          <LuxuryCard compact style={[styles.metricCard, metricStyle]}><Text style={[styles.metricLabel, { color: colors.muted }]}>Avg. order</Text><Text style={[styles.metricValue, { color: colors.primary }]}>{formatCurrency(analytics?.averageOrderValue)}</Text><Text style={[styles.metricHint, { color: colors.muted }]}>Per order</Text></LuxuryCard>
+          <LuxuryCard compact style={[styles.metricCard, metricStyle]}><Text style={[styles.metricLabel, { color: colors.muted }]}>Revenue</Text><SensitiveValue revealed={isRevealed} style={[styles.metricValue, { color: colors.primary }]}>{formatCurrency(analytics?.totalRevenue)}</SensitiveValue><Text style={[styles.metricHint, { color: colors.muted }]}>All time</Text></LuxuryCard>
+          <LuxuryCard compact style={[styles.metricCard, metricStyle]}><Text style={[styles.metricLabel, { color: colors.muted }]}>Avg. order</Text><SensitiveValue revealed={isRevealed} style={[styles.metricValue, { color: colors.primary }]}>{formatCurrency(analytics?.averageOrderValue)}</SensitiveValue><Text style={[styles.metricHint, { color: colors.muted }]}>Per order</Text></LuxuryCard>
         </View>
         <LuxuryCard accent style={[styles.chartCard, chartStyle]}>
           <View style={styles.chartHeader}><View><Text style={[styles.chartEyebrow, { color: colors.primary }]}>REVENUE ARC</Text><Text style={[styles.chartTitle, { color: colors.foreground }]}>{timeRange === "daily" ? "Daily movement" : "Monthly movement"}</Text></View><View style={styles.toggleRow}><LuxuryButton label="Day" onPress={() => setTimeRange("daily")} variant={timeRange === "daily" ? "primary" : "ghost"} style={styles.toggle} labelStyle={styles.toggleLabel} /><LuxuryButton label="Month" onPress={() => setTimeRange("monthly")} variant={timeRange === "monthly" ? "primary" : "ghost"} style={styles.toggle} labelStyle={styles.toggleLabel} /></View></View>
-          <View style={styles.sparkline}><MiniSparkline values={sparklineValues} color={colors.accent} /></View>
-          {revenueData.length > 0 ? <View style={styles.barList}>{revenueData.slice(-6).map((entry, index) => <View key={`${entry.label}-${index}`} style={styles.barRow}><Text style={[styles.barLabel, { color: colors.muted }]} numberOfLines={1}>{entry.label}</Text><View style={[styles.barTrack, { backgroundColor: `${colors.border}88` }]}><View style={[styles.barFill, { backgroundColor: colors.primary, width: `${Math.max(4, (entry.amount / maxRevenue) * 100)}%` }]} /></View><Text style={[styles.barValue, { color: colors.foreground }]}>{formatCurrency(entry.amount)}</Text></View>)}</View> : <Text style={[styles.emptyText, { color: colors.muted }]}>No revenue data has been recorded for this range.</Text>}
+          <View style={styles.sparkline}>{isRevealed ? <MiniSparkline values={sparklineValues} color={colors.accent} /> : <SensitiveValue revealed={false} style={[styles.lockedChartText, { color: colors.muted }]}>PRIVATE TELEMETRY</SensitiveValue>}</View>
+          {isRevealed && revenueData.length > 0 ? <View style={styles.barList}>{revenueData.slice(-6).map((entry, index) => <View key={`${entry.label}-${index}`} style={styles.barRow}><Text style={[styles.barLabel, { color: colors.muted }]} numberOfLines={1}>{entry.label}</Text><View style={[styles.barTrack, { backgroundColor: `${colors.border}88` }]}><View style={[styles.barFill, { backgroundColor: colors.primary, width: `${Math.max(4, (entry.amount / maxRevenue) * 100)}%` }]} /></View><Text style={[styles.barValue, { color: colors.foreground }]}>{formatCurrency(entry.amount)}</Text></View>)}</View> : <Text style={[styles.emptyText, { color: colors.muted }]}>{isRevealed ? "No revenue data has been recorded for this range." : "Use the eye control to reveal revenue telemetry."}</Text>}
         </LuxuryCard>
-        <LuxuryCard compact style={styles.conversionCard}><View><Text style={[styles.metricLabel, { color: colors.muted }]}>Conversion rate</Text><Text style={[styles.conversionValue, { color: colors.foreground }]}>{typeof analytics?.conversionRate === "number" ? `${analytics.conversionRate}%` : "—"}</Text></View><View style={[styles.conversionOrb, { borderColor: colors.primary }]}><Text style={[styles.conversionOrbText, { color: colors.primary }]}>↗</Text></View></LuxuryCard>
-        {analytics?.topProducts?.length ? <LuxuryCard compact><Text style={[styles.cardTitle, { color: colors.foreground }]}>Top pieces</Text>{analytics.topProducts.slice(0, 5).map((product, index) => <View key={`${product.name}-${index}`} style={styles.rankRow}><Text style={[styles.rankNumber, { color: colors.primary }]}>{String(index + 1).padStart(2, "0")}</Text><Text style={[styles.rankName, { color: colors.foreground }]} numberOfLines={1}>{product.name}</Text><StatusPill label={`${product.sales} sales`} tone="neutral" /></View>)}</LuxuryCard> : null}
-        {analytics?.topCustomers?.length ? <LuxuryCard compact><Text style={[styles.cardTitle, { color: colors.foreground }]}>Highest-value clients</Text>{analytics.topCustomers.slice(0, 5).map((customer, index) => <View key={`${customer.name}-${index}`} style={styles.rankRow}><Text style={[styles.rankNumber, { color: colors.primary }]}>{String(index + 1).padStart(2, "0")}</Text><Text style={[styles.rankName, { color: colors.foreground }]} numberOfLines={1}>{customer.name}</Text><Text style={[styles.customerSpend, { color: colors.primary }]}>{formatCurrency(customer.spent)}</Text></View>)}</LuxuryCard> : null}
+        <LuxuryCard compact style={styles.conversionCard}><View><Text style={[styles.metricLabel, { color: colors.muted }]}>Conversion rate</Text><SensitiveValue revealed={isRevealed} style={[styles.conversionValue, { color: colors.foreground }]}>{typeof analytics?.conversionRate === "number" ? `${analytics.conversionRate}%` : "—"}</SensitiveValue></View><View style={[styles.conversionOrb, { borderColor: colors.primary }]}><Text style={[styles.conversionOrbText, { color: colors.primary }]}>↗</Text></View></LuxuryCard>
+        {analytics?.topProducts?.length ? <LuxuryCard compact><Text style={[styles.cardTitle, { color: colors.foreground }]}>Top pieces</Text>{analytics.topProducts.slice(0, 5).map((product, index) => <View key={`${product.name}-${index}`} style={styles.rankRow}><Text style={[styles.rankNumber, { color: colors.primary }]}>{String(index + 1).padStart(2, "0")}</Text><SensitiveValue revealed={isRevealed} style={[styles.rankName, { color: colors.foreground }]}>{product.name}</SensitiveValue><StatusPill label={isRevealed ? `${product.sales} sales` : "Private"} tone="neutral" /></View>)}</LuxuryCard> : null}
+        {analytics?.topCustomers?.length ? <LuxuryCard compact><Text style={[styles.cardTitle, { color: colors.foreground }]}>Highest-value clients</Text>{analytics.topCustomers.slice(0, 5).map((customer, index) => <View key={`${customer.name}-${index}`} style={styles.rankRow}><Text style={[styles.rankNumber, { color: colors.primary }]}>{String(index + 1).padStart(2, "0")}</Text><SensitiveValue revealed={isRevealed} style={[styles.rankName, { color: colors.foreground }]}>{customer.name}</SensitiveValue><SensitiveValue revealed={isRevealed} style={[styles.customerSpend, { color: colors.primary }]}>{formatCurrency(customer.spent)}</SensitiveValue></View>)}</LuxuryCard> : null}
       </ScrollView>
     </ScreenContainer>
   );
@@ -107,7 +110,8 @@ const styles = StyleSheet.create({
   toggleRow: { flexDirection: "row", gap: 5 },
   toggle: { minHeight: 34, paddingHorizontal: 8, borderRadius: 11 },
   toggleLabel: { fontSize: 10 },
-  sparkline: { height: 48 },
+  sparkline: { height: 48, justifyContent: "center" },
+  lockedChartText: { fontSize: 12, fontWeight: "900", letterSpacing: 1.2 },
   barList: { gap: 11 },
   barRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   barLabel: { width: 62, fontSize: 10 },

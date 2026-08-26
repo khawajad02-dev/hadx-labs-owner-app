@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
+import { PrivacyGate } from "@/components/privacy-ui";
 
 export default function TabLayout() {
   const colors = useColors();
@@ -17,7 +18,8 @@ export default function TabLayout() {
   const isNeumorphic = colors.themeId === "neumorphic-luxe";
 
   return (
-    <Tabs
+    <PrivacyGate>
+      <Tabs
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: "transparent" },
@@ -55,6 +57,7 @@ export default function TabLayout() {
       <Tabs.Screen name="customers" options={{ title: "Clients", tabBarIcon: ({ color }) => <IconSymbol size={21} name="person.2" color={color} /> }} />
       <Tabs.Screen name="analytics" options={{ title: "Insights", tabBarIcon: ({ color }) => <IconSymbol size={21} name="chart.bar" color={color} /> }} />
       <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: ({ color }) => <IconSymbol size={21} name="gear" color={color} /> }} />
-    </Tabs>
+      </Tabs>
+    </PrivacyGate>
   );
 }

@@ -16,6 +16,8 @@ import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/components/luxury-ui";
 import { useColors } from "@/hooks/use-colors";
+import { SensitiveValue } from "@/components/privacy-ui";
+import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { apiDelete, apiGet } from "@/lib/api-client";
 
 interface Product {
@@ -73,6 +75,7 @@ export default function ProductsScreen() {
   const themeHeaderStyle = colors.themeId === "visionos-spatial" ? styles.spatialHeader : colors.themeId === "cyberpunk-terminal" ? styles.terminalHeader : colors.themeId === "bento-telemetry" ? styles.bentoHeader : undefined;
   const themeFilterStyle = colors.themeId === "cyberpunk-terminal" ? styles.terminalFilters : colors.themeId === "visionos-spatial" ? styles.spatialFilters : undefined;
   const themeEmptyStyle = colors.themeId === "visionos-spatial" ? styles.spatialEmpty : colors.themeId === "cyberpunk-terminal" ? styles.terminalEmpty : colors.themeId === "bento-telemetry" ? styles.bentoEmpty : colors.themeId === "neumorphic-luxe" ? styles.neumorphicEmpty : styles.cyberEmpty;
+  const isRevealed = usePrivacyStore((state) => state.isRevealed);
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -157,22 +160,22 @@ export default function ProductsScreen() {
         )}
         <View style={styles.productCopy}>
           <View style={styles.productTitleRow}>
-            <Text style={[styles.productTitle, { color: colors.foreground }]} numberOfLines={2}>{item.title}</Text>
+            <SensitiveValue revealed={isRevealed} style={[styles.productTitle, { color: colors.foreground }]}>{item.title}</SensitiveValue>
             <StatusPill label={item.status === "PUBLISHED" ? "Live" : "Draft"} tone={item.status === "PUBLISHED" ? "success" : "warning"} />
           </View>
-          <Text style={[styles.productSku, { color: colors.muted }]}>{item.sku} · {item.category || "Uncategorised"}</Text>
-          <Text style={[styles.productPrice, { color: colors.primary }]}>{formatPrice(item)}</Text>
-          <Text style={[styles.mediaCount, { color: colors.muted }]}>{item.media?.length || (item.imageUrl ? 1 : 0)} media asset{(item.media?.length || (item.imageUrl ? 1 : 0)) === 1 ? "" : "s"}</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.productSku, { color: colors.muted }]}>{item.sku} · {item.category || "Uncategorised"}</SensitiveValue>
+          <SensitiveValue revealed={isRevealed} style={[styles.productPrice, { color: colors.primary }]}>{formatPrice(item)}</SensitiveValue>
+          <SensitiveValue revealed={isRevealed} style={[styles.mediaCount, { color: colors.muted }]}>{item.media?.length || (item.imageUrl ? 1 : 0)} media asset{(item.media?.length || (item.imageUrl ? 1 : 0)) === 1 ? "" : "s"}</SensitiveValue>
         </View>
       </View>
       <View style={[styles.productMetaRow, { borderTopColor: `${colors.border}88` }]}>
 
-        <Text style={[styles.metaText, { color: colors.muted }]}>Stock {item.stockQuantity.toLocaleString("en-US")}</Text>
+        <SensitiveValue revealed={isRevealed} style={[styles.metaText, { color: colors.muted }]}>Stock {item.stockQuantity.toLocaleString("en-US")}</SensitiveValue>
         <Text style={[styles.metaText, { color: item.stockQuantity > 0 ? colors.success : colors.error }]}>{item.stockQuantity > 0 ? "Available" : "Out of stock"}</Text>
       </View>
       <View style={[styles.productActions, themeActionStyle]}>
-        <LuxuryButton label="Edit" onPress={() => router.push({ pathname: "/edit-product", params: { id: item.id } })} variant="secondary" style={styles.productAction} />
-        <LuxuryButton label="Remove" onPress={() => handleDeleteProduct(item)} variant="danger" style={styles.productAction} />
+        <LuxuryButton label="Edit" onPress={() => router.push({ pathname: "/edit-product", params: { id: item.id } })} variant="secondary" disabled={!isRevealed} style={styles.productAction} />
+        <LuxuryButton label="Remove" onPress={() => handleDeleteProduct(item)} variant="danger" disabled={!isRevealed} style={styles.productAction} />
       </View>
     </LuxuryCard>
     );
@@ -196,7 +199,7 @@ export default function ProductsScreen() {
             <SectionHeading
               eyebrow="ATELIER / CATALOG"
               title="Products"
-              detail={`${total.toLocaleString("en-US")} pieces in your catalog`}
+              detail={isRevealed ? `${total.toLocaleString("en-US")} pieces in your catalog` : "•••• pieces in your catalog"}
               action={<LuxuryButton label="Add" onPress={() => router.push("/add-product")} variant="primary" style={styles.addButton} />}
             />
             <TextInput
