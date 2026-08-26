@@ -183,10 +183,10 @@ export default function OrdersScreen() {
     <LuxuryCard compact style={[styles.orderCard, themeCardStyle]}>
       <View style={styles.orderHeader}>
         <View style={styles.orderCopy}>
-          <Text style={[styles.orderReference, { color: colors.foreground }]}>{item.orderReference}</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.orderReference, { color: colors.foreground }]}>{item.orderReference}</SensitiveValue>
           <SensitiveValue revealed={isRevealed} style={[styles.customerName, { color: colors.muted }]}>{item.fullName}</SensitiveValue>
         </View>
-        <StatusPill label={item.orderStatus} tone={toneForStatus(item.orderStatus)} />
+        {isRevealed ? <StatusPill label={item.orderStatus} tone={toneForStatus(item.orderStatus)} /> : <SensitiveValue revealed={false} style={[styles.detailValue, { color: colors.muted }]}>Private status</SensitiveValue>}
       </View>
       <View style={[styles.orderBody, themeBodyStyle, { borderColor: `${colors.border}88` }]}>
 

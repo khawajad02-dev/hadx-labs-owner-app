@@ -141,7 +141,7 @@ export default function DashboardScreen() {
               </SensitiveValue>
             </View>
             <View style={styles.sparklineWrap}>
-              <MiniSparkline values={metrics ? [18, 24, 20, 31, 28, 38, 44] : [0, 0, 0, 0, 0, 0, 0]} color={colors.accent} />
+              <MiniSparkline values={isRevealed && metrics ? [18, 24, 20, 31, 28, 38, 44] : [24, 24, 24, 24, 24, 24, 24]} color={isRevealed ? colors.accent : `${colors.muted}88`} />
             </View>
           </View>
         </LuxuryCard>

@@ -203,7 +203,7 @@ export default function SettingsScreen() {
         <LuxuryCard accent style={styles.privacyCard}>
           <View style={styles.securityHeader}>
             <View style={styles.controlCopy}>
-              <Text style={[styles.controlTitle, { color: colors.foreground }]}>App {credentialKind === "pattern" ? "pattern" : "password"} saved</Text>
+              <Text style={[styles.controlTitle, { color: colors.foreground }]}>{hasCredential ? `App ${credentialKind === "pattern" ? "pattern" : "password"} saved` : "App privacy lock not set"}</Text>
               <Text style={[styles.controlDetail, { color: colors.muted }]}>{hasCredential ? "Sensitive products, clients, orders, and revenue stay masked until you authenticate." : "Set an app credential to protect the control room."}</Text>
             </View>
             <StatusPill label={isRevealed ? "Visible" : "Private"} tone={isRevealed ? "warning" : "success"} />
@@ -222,7 +222,7 @@ export default function SettingsScreen() {
         <LuxuryCard compact>
           <Text style={[styles.infoEyebrow, { color: colors.primary }]}>HADX LABS OWNER</Text>
           <Text style={[styles.infoTitle, { color: colors.foreground }]}>Luxury control, without the clutter.</Text>
-          <Text style={[styles.infoDetail, { color: colors.muted }]}>Version 1.5 · {colors.themeName}</Text>
+          <Text style={[styles.infoDetail, { color: colors.muted }]}>Version 1.6.1 · {colors.themeName}</Text>
         </LuxuryCard>
       </ScrollView>
     </ScreenContainer>

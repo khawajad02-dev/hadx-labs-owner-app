@@ -149,19 +149,25 @@ export default function ProductsScreen() {
     return (
     <LuxuryCard compact style={[styles.productCard, themeCardStyle]}>
       <View style={[styles.productTop, themeTopStyle]}>
-        {primaryMedia?.type === "video" ? (
-          <View style={[styles.productImage, styles.videoImage, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}35` }]}><Text style={[styles.videoMark, { color: colors.primary }]}>▶</Text><Text style={[styles.videoLabel, { color: colors.foreground }]}>Video</Text></View>
-        ) : primaryMedia?.url || item.imageUrl ? (
-          <Image source={{ uri: primaryMedia?.url || item.imageUrl || "" }} style={styles.productImage} resizeMode="cover" />
+        {isRevealed ? (
+          primaryMedia?.type === "video" ? (
+            <View style={[styles.productImage, styles.videoImage, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}35` }]}><Text style={[styles.videoMark, { color: colors.primary }]}>▶</Text><Text style={[styles.videoLabel, { color: colors.foreground }]}>Video</Text></View>
+          ) : primaryMedia?.url || item.imageUrl ? (
+            <Image source={{ uri: primaryMedia?.url || item.imageUrl || "" }} style={styles.productImage} resizeMode="cover" />
+          ) : (
+            <View style={[styles.productImage, styles.imagePlaceholder, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}35` }]}>
+              <Text style={[styles.placeholderMark, { color: colors.primary }]}>H</Text>
+            </View>
+          )
         ) : (
-          <View style={[styles.productImage, styles.imagePlaceholder, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}35` }]}>
-            <Text style={[styles.placeholderMark, { color: colors.primary }]}>H</Text>
+          <View style={[styles.productImage, styles.imagePlaceholder, { backgroundColor: `${colors.muted}12`, borderColor: `${colors.muted}35` }]}>
+            <Text style={[styles.placeholderMark, { color: colors.muted }]}>•••</Text>
           </View>
         )}
         <View style={styles.productCopy}>
           <View style={styles.productTitleRow}>
             <SensitiveValue revealed={isRevealed} style={[styles.productTitle, { color: colors.foreground }]}>{item.title}</SensitiveValue>
-            <StatusPill label={item.status === "PUBLISHED" ? "Live" : "Draft"} tone={item.status === "PUBLISHED" ? "success" : "warning"} />
+            {isRevealed ? <StatusPill label={item.status === "PUBLISHED" ? "Live" : "Draft"} tone={item.status === "PUBLISHED" ? "success" : "warning"} /> : <SensitiveValue revealed={false} style={[styles.productSku, { color: colors.muted }]}>Private status</SensitiveValue>}
           </View>
           <SensitiveValue revealed={isRevealed} style={[styles.productSku, { color: colors.muted }]}>{item.sku} · {item.category || "Uncategorised"}</SensitiveValue>
           <SensitiveValue revealed={isRevealed} style={[styles.productPrice, { color: colors.primary }]}>{formatPrice(item)}</SensitiveValue>
@@ -171,7 +177,7 @@ export default function ProductsScreen() {
       <View style={[styles.productMetaRow, { borderTopColor: `${colors.border}88` }]}>
 
         <SensitiveValue revealed={isRevealed} style={[styles.metaText, { color: colors.muted }]}>Stock {item.stockQuantity.toLocaleString("en-US")}</SensitiveValue>
-        <Text style={[styles.metaText, { color: item.stockQuantity > 0 ? colors.success : colors.error }]}>{item.stockQuantity > 0 ? "Available" : "Out of stock"}</Text>
+        <SensitiveValue revealed={isRevealed} style={[styles.metaText, { color: colors.muted }]}>{item.stockQuantity > 0 ? "Available" : "Out of stock"}</SensitiveValue>
       </View>
       <View style={[styles.productActions, themeActionStyle]}>
         <LuxuryButton label="Edit" onPress={() => router.push({ pathname: "/edit-product", params: { id: item.id } })} variant="secondary" disabled={!isRevealed} style={styles.productAction} />
