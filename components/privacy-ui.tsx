@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { BlurView } from "expo-blur";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 import { CyberOrb, LuxuryButton, LuxuryCard } from "@/components/luxury-ui";
 import { useColors } from "@/hooks/use-colors";
@@ -308,7 +309,7 @@ export function PrivacyEyeButton() {
       }}
       style={({ pressed }) => [styles.eyeButton, { borderColor: `${colors.primary}AA`, backgroundColor: `${colors.background}CC` }, pressed && styles.eyePressed]}
     >
-      <Text style={[styles.eyeIcon, { color: colors.primary }]}>{isRevealed ? "◉" : "◌"}</Text>
+      <MaterialIcons name={isRevealed ? "visibility-off" : "visibility"} size={18} color={colors.primary} />
     </Pressable>
   );
 }
