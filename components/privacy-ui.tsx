@@ -119,7 +119,7 @@ function CredentialModal({
   const isPattern = credentialKind === "pattern";
 
   useEffect(() => {
-    if (!visible) setValue("");
+    setValue("");
   }, [visible, resetKey]);
 
   return (
@@ -151,7 +151,7 @@ function CredentialModal({
             {isPattern ? (
               <>
                 <PatternPad disabled={Boolean(busy)} resetKey={resetKey} onChange={setValue} />
-                <Text style={[styles.patternHint, { color: colors.muted }]}>{value ? `${value.length} dots connected. Press the button below.` : "Tap dots one by one or drag across them; connect at least 4 dots."}</Text>
+                <Text style={[styles.patternHint, { color: colors.muted }]}>{value ? `${value.length} dot${value.length === 1 ? "" : "s"} connected. Press the button below.` : "Draw any pattern across the dots, then press the button below."}</Text>
               </>
             ) : (
               <TextInput
@@ -251,23 +251,23 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
 
   const submitSetup = async (secret: string) => {
     const normalized = secret.trim();
-    const valid = setupKind === "pattern" ? /^[0-8]{4,9}$/.test(normalized) && new Set(normalized).size >= 4 : normalized.length >= 8;
+    const valid = setupKind === "pattern" ? /^[0-8]{1,9}$/.test(normalized) && new Set(normalized).size === normalized.length : normalized.length >= 8;
     if (!valid) {
-      setSetupError(setupKind === "pattern" ? "Draw at least 4 different dots, then press OK." : "Use at least 8 characters for your app password.");
+      setSetupError(setupKind === "pattern" ? "Draw a pattern, release your finger, then press OK." : "Use at least 8 characters for your app password.");
       return;
     }
     if (setupKind === "pattern" && !setupPattern) {
       setSetupPattern(normalized);
       setPatternSetupStep("confirm");
       setPatternResetKey(`pattern-${Date.now()}`);
-      setSetupError("Pattern saved. Draw the same pattern again, then press Done.");
+      setSetupError("Pattern captured. Draw the exact same pattern again, then press Done.");
       return;
     }
     if (setupKind === "pattern" && setupPattern !== normalized) {
       setSetupPattern(null);
       setPatternSetupStep("draw");
       setPatternResetKey(`pattern-${Date.now()}`);
-      setSetupError("Patterns do not match. Draw your pattern again, then press OK.");
+      setSetupError("Patterns do not match. Draw the same pattern you used first, then press OK.");
       return;
     }
     setBusy(true);
