@@ -28,11 +28,11 @@ const PATTERN_DOTS = [
 
 function PatternPad({
   disabled,
-  onComplete,
+  onChange,
   resetKey,
 }: {
   disabled: boolean;
-  onComplete: (pattern: string) => void;
+  onChange: (pattern: string) => void;
   resetKey: string;
 }) {
   const [path, setPath] = useState<number[]>([]);
@@ -49,12 +49,13 @@ function PatternPad({
   const addDot = (x: number, y: number) => {
     if (disabled) return;
     const index = dotAt(x, y);
-    if (index !== null && !path.includes(index)) setPath((current) => [...current, index]);
-  };
-
-  const finish = () => {
-    if (path.length >= 4) onComplete(path.join(""));
-    setPath([]);
+    if (index === null) return;
+    setPath((current) => {
+      if (current.includes(index)) return current;
+      const next = [...current, index];
+      onChange(next.join(""));
+      return next;
+    });
   };
 
   return (
@@ -64,7 +65,6 @@ function PatternPad({
       onStartShouldSetResponder={() => !disabled}
       onResponderGrant={(event) => addDot(event.nativeEvent.locationX, event.nativeEvent.locationY)}
       onResponderMove={(event) => addDot(event.nativeEvent.locationX, event.nativeEvent.locationY)}
-      onResponderRelease={finish}
       style={[styles.patternPad, disabled && styles.patternDisabled]}
     >
       {path.slice(1).map((dotIndex, segmentIndex) => {
@@ -150,8 +150,8 @@ function CredentialModal({
 
             {isPattern ? (
               <>
-                <PatternPad disabled={Boolean(busy)} resetKey={resetKey} onComplete={setValue} />
-                <Text style={[styles.patternHint, { color: colors.muted }]}>{value ? `${value.length} dots connected. Press the button below.` : "Draw a pattern by connecting at least 4 dots."}</Text>
+                <PatternPad disabled={Boolean(busy)} resetKey={resetKey} onChange={setValue} />
+                <Text style={[styles.patternHint, { color: colors.muted }]}>{value ? `${value.length} dots connected. Press the button below.` : "Tap dots one by one or drag across them; connect at least 4 dots."}</Text>
               </>
             ) : (
               <TextInput
@@ -233,24 +233,20 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!revealRequested || isLocked || isInitializing || busy) return;
     clearRevealRequest();
+    setRevealError("");
     if (!biometricEnabled) {
-      setRevealError("");
       setRevealModal(true);
       return;
     }
-    let active = true;
     setBusy(true);
-    void revealWithBiometric().then((success) => {
-      if (!active) return;
+    void (async () => {
+      const success = await revealWithBiometric();
       if (!success) {
         setRevealError("Biometric check was cancelled. Use your saved app credential instead.");
         setRevealModal(true);
       }
       setBusy(false);
-    });
-    return () => {
-      active = false;
-    };
+    })();
   }, [busy, clearRevealRequest, isInitializing, isLocked, biometricEnabled, revealRequested, revealWithBiometric]);
 
   const submitSetup = async (secret: string) => {
@@ -358,7 +354,7 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
         biometricEnabled={biometricEnabled}
         busy={busy}
         error={unlockError}
-        resetKey={`unlock-${credentialKind || "password"}`}
+        resetKey={`unlock-${credentialKind || "password"}-${unlockError}`}
       />
       <CredentialModal
         visible={revealModal && !isRevealed}
@@ -372,7 +368,7 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
         busy={busy}
         error={revealError}
         onClose={() => setRevealModal(false)}
-        resetKey={`reveal-${credentialKind || "password"}`}
+        resetKey={`reveal-${credentialKind || "password"}-${revealError}`}
       />
     </View>
   );
