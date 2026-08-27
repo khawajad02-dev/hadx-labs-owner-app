@@ -44,7 +44,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   const router = useRouter();
   const { currentTheme, setTheme } = useThemeStore();
-  const { hasCredential, credentialKind, biometricEnabled, appLockEnabled, isRevealed, setBiometricEnabled, setAppLockEnabled, hideSensitive, lock, resetPrivacy } = usePrivacyStore();
+  const { hasCredential, credentialKind, biometricEnabled, appLockEnabled, isRevealed, setBiometricEnabled, setAppLockEnabled, requestPasswordChange, hideSensitive, lock } = usePrivacyStore();
   const openStorefront = async () => {
     try {
       await Linking.openURL("https://hadx-labs.vercel.app");
@@ -115,11 +115,8 @@ export default function SettingsScreen() {
     void setAppLockEnabled(true).catch((error) => Alert.alert("Could not enable app lock", error instanceof Error ? error.message : "Please try again."));
   };
 
-  const handleResetPrivacy = () => {
-    Alert.alert("Forget app lock?", "This removes the saved app credential from this device. You will create a new one next time. Your server session and store data remain unchanged.", [
-      { text: "Keep lock", style: "cancel" },
-      { text: "Forget app lock", style: "destructive", onPress: () => void resetPrivacy() },
-    ]);
+  const handleChangePassword = () => {
+    requestPasswordChange();
   };
 
   const handleLogout = () => {
@@ -223,7 +220,7 @@ export default function SettingsScreen() {
             <LuxuryButton label={biometricEnabled ? "Disable fingerprint / face" : "Enable fingerprint / face"} onPress={() => void handleBiometricToggle()} variant="secondary" disabled={!hasCredential} />
             <LuxuryButton label={appLockEnabled ? "Disable app lock" : "Enable app lock"} onPress={handleAppLockToggle} variant={appLockEnabled ? "danger" : "primary"} disabled={!hasCredential} />
             <LuxuryButton label="Hide sensitive data" onPress={handleRelock} variant="ghost" disabled={!isRevealed} />
-            <LuxuryButton label="Forget app lock" onPress={handleResetPrivacy} variant="danger" disabled={!hasCredential} />
+            <LuxuryButton label="Change app password" onPress={handleChangePassword} variant="danger" disabled={!hasCredential} />
           </View>
         </LuxuryCard>
         <View style={styles.securityActions}>
@@ -234,7 +231,7 @@ export default function SettingsScreen() {
         <LuxuryCard compact>
           <Text style={[styles.infoEyebrow, { color: colors.primary }]}>HADX LABS OWNER</Text>
           <Text style={[styles.infoTitle, { color: colors.foreground }]}>Luxury control, without the clutter.</Text>
-          <Text style={[styles.infoDetail, { color: colors.muted }]}>Version 1.6.1 · {colors.themeName}</Text>
+          <Text style={[styles.infoDetail, { color: colors.muted }]}>Version 1.6.5 · {colors.themeName}</Text>
         </LuxuryCard>
       </ScrollView>
     </ScreenContainer>

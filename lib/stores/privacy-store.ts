@@ -4,8 +4,8 @@ import * as LocalAuthentication from "expo-local-authentication";
 import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
 
-const APP_CREDENTIAL_KEY = "hadx_owner_app_credential_v2";
-const LEGACY_APP_CREDENTIAL_KEY = "hadx_owner_app_credential_v1";
+const APP_CREDENTIAL_KEY = "hadx_owner_app_credential_v3";
+const LEGACY_APP_CREDENTIAL_KEYS = ["hadx_owner_app_credential_v1", "hadx_owner_app_credential_v2"];
 const BIOMETRIC_OPT_IN_KEY = "hadx_owner_biometric_enabled_v1";
 const APP_LOCK_ENABLED_KEY = "hadx_owner_app_lock_enabled_v1";
 
@@ -26,9 +26,13 @@ interface PrivacyState {
   appLockEnabled: boolean;
   isInitializing: boolean;
   revealRequested: boolean;
+  passwordChangeRequested: boolean;
+  passwordChangeAuthorized: boolean;
 
   initialize: () => Promise<void>;
   setCredential: (secret: string, kind: CredentialKind) => Promise<void>;
+  changePassword: (secret: string) => Promise<boolean>;
+  authorizePasswordChange: () => Promise<boolean>;
   unlockWithCredential: (secret: string) => Promise<boolean>;
   authenticateBiometric: (promptMessage: string) => Promise<boolean>;
   unlockWithBiometric: () => Promise<boolean>;
@@ -36,6 +40,8 @@ interface PrivacyState {
   revealWithBiometric: () => Promise<boolean>;
   requestReveal: () => void;
   clearRevealRequest: () => void;
+  requestPasswordChange: () => void;
+  clearPasswordChangeRequest: () => void;
   hideSensitive: () => void;
   lock: () => void;
   setBiometricEnabled: (enabled: boolean) => Promise<void>;
@@ -111,6 +117,8 @@ export const usePrivacyStore = create<PrivacyState>((set, get) => ({
   appLockEnabled: true,
   isInitializing: true,
   revealRequested: false,
+  passwordChangeRequested: false,
+  passwordChangeAuthorized: false,
 
   initialize: async () => {
     try {
@@ -203,8 +211,15 @@ export const usePrivacyStore = create<PrivacyState>((set, get) => ({
 
   requestReveal: () => set({ revealRequested: true }),
   clearRevealRequest: () => set({ revealRequested: false }),
+  requestPasswordChange: () => set({ passwordChangeRequested: true }),
+  clearPasswordChangeRequest: () => set({ passwordChangeRequested: false }),
+  authorizePasswordChange: async () => {
+    const success = await get().authenticateBiometric("Authorize changing your HADX app password");
+    if (success) set({ passwordChangeAuthorized: true });
+    return success;
+  },
   hideSensitive: () => set({ isRevealed: false }),
-  lock: () => set((state) => ({ isLocked: state.appLockEnabled, isRevealed: false, revealRequested: false })),
+  lock: () => set((state) => ({ isLocked: state.appLockEnabled, isRevealed: false, revealRequested: false, passwordChangeRequested: false, passwordChangeAuthorized: false })),
 
   setBiometricEnabled: async (enabled) => {
     if (enabled && !(await getBiometricAvailability())) {
@@ -219,11 +234,22 @@ export const usePrivacyStore = create<PrivacyState>((set, get) => ({
       throw new Error("Create an app pattern or password before enabling the app lock.");
     }
     await writeValue(APP_LOCK_ENABLED_KEY, String(enabled));
-    set({ appLockEnabled: enabled, isLocked: enabled, isRevealed: false, revealRequested: false });
+    set({ appLockEnabled: enabled, isLocked: enabled, isRevealed: false, revealRequested: false, passwordChangeRequested: false, passwordChangeAuthorized: false });
+  },
+
+  changePassword: async (secret) => {
+    if (!get().hasCredential || !get().passwordChangeAuthorized) return false;
+    const normalized = secret.trim();
+    if (normalized.length < 8) return false;
+    const salt = Crypto.randomUUID();
+    const stored: StoredCredential = { kind: "password", salt, digest: await digest(normalized, "password", salt) };
+    await writeValue(APP_CREDENTIAL_KEY, JSON.stringify(stored));
+    set({ hasCredential: true, credentialKind: "password", isLocked: false, isRevealed: false, passwordChangeAuthorized: false });
+    return true;
   },
 
   resetPrivacy: async () => {
-    await Promise.all([deleteValue(APP_CREDENTIAL_KEY), deleteValue(LEGACY_APP_CREDENTIAL_KEY), deleteValue(BIOMETRIC_OPT_IN_KEY), deleteValue(APP_LOCK_ENABLED_KEY)]);
-    set({ hasCredential: false, credentialKind: null, appLockEnabled: true, isLocked: true, isRevealed: false, biometricEnabled: false, revealRequested: false });
+    await Promise.all([deleteValue(APP_CREDENTIAL_KEY), ...LEGACY_APP_CREDENTIAL_KEYS.map(deleteValue), deleteValue(BIOMETRIC_OPT_IN_KEY), deleteValue(APP_LOCK_ENABLED_KEY)]);
+    set({ hasCredential: false, credentialKind: null, appLockEnabled: true, isLocked: true, isRevealed: false, biometricEnabled: false, revealRequested: false, passwordChangeRequested: false, passwordChangeAuthorized: false });
   },
 }));

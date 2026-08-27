@@ -92,6 +92,7 @@ function CredentialModal({
   allowKindChange,
   onKindChange,
   onSubmit,
+  confirmPassword,
   onBiometric,
   biometricEnabled,
   busy,
@@ -106,7 +107,8 @@ function CredentialModal({
   credentialKind: CredentialKind;
   allowKindChange?: boolean;
   onKindChange?: (kind: CredentialKind) => void;
-  onSubmit: (value: string) => void;
+  onSubmit: (value: string, confirmation?: string) => void;
+  confirmPassword?: boolean;
   onBiometric?: () => void;
   biometricEnabled?: boolean;
   busy?: boolean;
@@ -116,10 +118,12 @@ function CredentialModal({
 }) {
   const colors = useColors();
   const [value, setValue] = useState("");
+  const [confirmation, setConfirmation] = useState("");
   const isPattern = credentialKind === "pattern";
 
   useEffect(() => {
     setValue("");
+    setConfirmation("");
   }, [visible, resetKey]);
 
   return (
@@ -172,9 +176,27 @@ function CredentialModal({
               />
             )}
 
+            {confirmPassword ? (
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!busy}
+                keyboardType="default"
+                maxLength={72}
+                onChangeText={setConfirmation}
+                onSubmitEditing={() => onSubmit(value, confirmation)}
+                placeholder="Confirm your new app password"
+                placeholderTextColor={`${colors.muted}B3`}
+                returnKeyType="done"
+                secureTextEntry
+                value={confirmation}
+                style={[styles.credentialInput, { backgroundColor: `${colors.background}DD`, borderColor: colors.border, color: colors.foreground }]}
+              />
+            ) : null}
+
             {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
             {onBiometric && biometricEnabled ? <LuxuryButton label="Use fingerprint / face" onPress={onBiometric} loading={busy} variant="secondary" /> : null}
-            <LuxuryButton label={submitLabel} onPress={() => onSubmit(value)} loading={busy} variant="primary" />
+            <LuxuryButton label={submitLabel} onPress={() => onSubmit(value, confirmation)} loading={busy} variant="primary" />
             {onClose ? <LuxuryButton label="Not now" onPress={onClose} disabled={busy} variant="ghost" /> : null}
           </LuxuryCard>
         </KeyboardAvoidingView>
@@ -200,16 +222,18 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
     revealWithCredential,
     revealWithBiometric,
     clearRevealRequest,
+    passwordChangeRequested,
+    clearPasswordChangeRequest,
+    authorizePasswordChange,
+    changePassword,
   } = usePrivacyStore();
-  const [setupKind, setSetupKind] = useState<CredentialKind>("pattern");
   const [setupError, setSetupError] = useState("");
   const [unlockError, setUnlockError] = useState("");
   const [revealError, setRevealError] = useState("");
   const [revealModal, setRevealModal] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [setupPattern, setSetupPattern] = useState<string | null>(null);
-  const [patternSetupStep, setPatternSetupStep] = useState<"draw" | "confirm">("draw");
-  const [patternResetKey, setPatternResetKey] = useState("pattern-0");
+  const [passwordChangeModal, setPasswordChangeModal] = useState(false);
+  const [passwordChangeError, setPasswordChangeError] = useState("");
 
   useEffect(() => {
     void initialize();
@@ -232,6 +256,25 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!passwordChangeRequested || isInitializing || busy) return;
+    clearPasswordChangeRequest();
+    if (!biometricEnabled) {
+      setPasswordChangeError("Enable fingerprint / face authentication before changing the app password.");
+      return;
+    }
+    setBusy(true);
+    void authorizePasswordChange().then((success) => {
+      setBusy(false);
+      if (success) {
+        setPasswordChangeError("");
+        setPasswordChangeModal(true);
+      } else {
+        setPasswordChangeError("Fingerprint check was cancelled. Your password was not changed.");
+      }
+    });
+  }, [authorizePasswordChange, biometricEnabled, busy, clearPasswordChangeRequest, isInitializing, passwordChangeRequested]);
+
+  useEffect(() => {
     if (!revealRequested || isLocked || isInitializing || busy) return;
     clearRevealRequest();
     setRevealError("");
@@ -250,36 +293,43 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
     })();
   }, [busy, clearRevealRequest, isInitializing, isLocked, biometricEnabled, revealRequested, revealWithBiometric]);
 
-  const submitSetup = async (secret: string) => {
+  const submitSetup = async (secret: string, confirmation = "") => {
     const normalized = secret.trim();
-    const valid = setupKind === "pattern" ? /^[0-8]{1,9}$/.test(normalized) && new Set(normalized).size === normalized.length : normalized.length >= 8;
-    if (!valid) {
-      setSetupError(setupKind === "pattern" ? "Draw a pattern, release your finger, then press OK." : "Use at least 8 characters for your app password.");
+    if (normalized.length < 8) {
+      setSetupError("Use at least 8 characters for your app password.");
       return;
     }
-    if (setupKind === "pattern" && !setupPattern) {
-      setSetupPattern(normalized);
-      setPatternSetupStep("confirm");
-      setPatternResetKey(`pattern-${Date.now()}`);
-      setSetupError("Pattern captured. Draw the exact same pattern again, then press Done.");
-      return;
-    }
-    if (setupKind === "pattern" && setupPattern !== normalized) {
-      setSetupPattern(null);
-      setPatternSetupStep("draw");
-      setPatternResetKey(`pattern-${Date.now()}`);
-      setSetupError("Patterns do not match. Draw the same pattern you used first, then press OK.");
+    if (normalized !== confirmation.trim()) {
+      setSetupError("Passwords do not match. Enter the same password in both fields.");
       return;
     }
     setBusy(true);
     setSetupError("");
     try {
-      await setCredential(normalized, setupKind);
+      await setCredential(normalized, "password");
     } catch (error) {
-      setSetupError(error instanceof Error ? error.message : "Could not save your app credential.");
+      setSetupError(error instanceof Error ? error.message : "Could not save your app password.");
     } finally {
       setBusy(false);
     }
+  };
+
+  const submitPasswordChange = async (secret: string, confirmation = "") => {
+    const normalized = secret.trim();
+    if (normalized.length < 8) {
+      setPasswordChangeError("Use at least 8 characters for your new app password.");
+      return;
+    }
+    if (normalized !== confirmation.trim()) {
+      setPasswordChangeError("Passwords do not match. Enter the same new password twice.");
+      return;
+    }
+    setBusy(true);
+    setPasswordChangeError("");
+    const success = await changePassword(normalized);
+    setBusy(false);
+    if (success) setPasswordChangeModal(false);
+    else setPasswordChangeError("Password was not changed. Please start again from Settings.");
   };
 
   const submitUnlock = async (secret: string) => {
@@ -333,16 +383,15 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
       {children}
       <CredentialModal
         visible={!hasCredential}
-        title="Set your app lock"
-        detail="Choose a saved HADX pattern or password. This is separate from your phone lock and is stored only on this device."
-        submitLabel={setupKind === "pattern" ? (patternSetupStep === "draw" ? "OK — save pattern" : "Done — open app") : "Save private lock"}
-        credentialKind={setupKind}
-        allowKindChange
-        onKindChange={(kind) => { setSetupKind(kind); setSetupPattern(null); setPatternSetupStep("draw"); setPatternResetKey(`pattern-${Date.now()}`); setSetupError(""); }}
-        onSubmit={(value) => void submitSetup(value)}
+        title="Create app password"
+        detail="Create a private HADX app password. This is separate from your phone lock and is stored only as a secure digest on this device."
+        submitLabel="Save app password"
+        credentialKind="password"
+        confirmPassword
+        onSubmit={(value, confirmation) => void submitSetup(value, confirmation)}
         busy={busy}
         error={setupError}
-        resetKey={patternResetKey}
+        resetKey="setup-password"
       />
       <CredentialModal
         visible={hasCredential && appLockEnabled && isLocked}
@@ -356,6 +405,19 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
         busy={busy}
         error={unlockError}
         resetKey={`unlock-${credentialKind || "password"}-${unlockError}`}
+      />
+      <CredentialModal
+        visible={passwordChangeModal}
+        title="Change app password"
+        detail="Fingerprint authorization is complete. Enter and confirm your new HADX app password, then press Save."
+        submitLabel="Save new password"
+        credentialKind="password"
+        confirmPassword
+        onSubmit={(value, confirmation) => void submitPasswordChange(value, confirmation)}
+        busy={busy}
+        error={passwordChangeError}
+        onClose={() => setPasswordChangeModal(false)}
+        resetKey={`change-password-${passwordChangeModal}`}
       />
       <CredentialModal
         visible={revealModal && !isRevealed}
