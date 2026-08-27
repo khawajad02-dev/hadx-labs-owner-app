@@ -44,7 +44,7 @@ export default function SettingsScreen() {
   const colors = useColors();
   const router = useRouter();
   const { currentTheme, setTheme } = useThemeStore();
-  const { hasCredential, credentialKind, biometricEnabled, isRevealed, setBiometricEnabled, hideSensitive, lock, resetPrivacy } = usePrivacyStore();
+  const { hasCredential, credentialKind, biometricEnabled, appLockEnabled, isRevealed, setBiometricEnabled, setAppLockEnabled, hideSensitive, lock, resetPrivacy } = usePrivacyStore();
   const openStorefront = async () => {
     try {
       await Linking.openURL("https://hadx-labs.vercel.app");
@@ -102,6 +102,17 @@ export default function SettingsScreen() {
     hideSensitive();
     lock();
     Alert.alert("Private mode enabled", "The Owner App is locked. Use your saved pattern, password, or biometric to continue.");
+  };
+
+  const handleAppLockToggle = () => {
+    if (appLockEnabled) {
+      Alert.alert("Disable app lock?", "Your saved pattern/password will stay on this phone, but the Owner App will stop asking for it at launch. Eye reveal authentication remains active.", [
+        { text: "Keep lock", style: "cancel" },
+        { text: "Disable app lock", style: "destructive", onPress: () => void setAppLockEnabled(false) },
+      ]);
+      return;
+    }
+    void setAppLockEnabled(true).catch((error) => Alert.alert("Could not enable app lock", error instanceof Error ? error.message : "Please try again."));
   };
 
   const handleResetPrivacy = () => {
@@ -204,12 +215,13 @@ export default function SettingsScreen() {
           <View style={styles.securityHeader}>
             <View style={styles.controlCopy}>
               <Text style={[styles.controlTitle, { color: colors.foreground }]}>{hasCredential ? `App ${credentialKind === "pattern" ? "pattern" : "password"} saved` : "App privacy lock not set"}</Text>
-              <Text style={[styles.controlDetail, { color: colors.muted }]}>{hasCredential ? "Sensitive products, clients, orders, and revenue stay masked until you authenticate." : "Set an app credential to protect the control room."}</Text>
+              <Text style={[styles.controlDetail, { color: colors.muted }]}>{hasCredential ? `${appLockEnabled ? "App lock is active. " : "App lock is disabled. "}Sensitive products, clients, orders, and revenue stay masked until eye authentication.` : "Set an app credential to protect the control room."}</Text>
             </View>
             <StatusPill label={isRevealed ? "Visible" : "Private"} tone={isRevealed ? "warning" : "success"} />
           </View>
           <View style={styles.securityActions}>
             <LuxuryButton label={biometricEnabled ? "Disable fingerprint / face" : "Enable fingerprint / face"} onPress={() => void handleBiometricToggle()} variant="secondary" disabled={!hasCredential} />
+            <LuxuryButton label={appLockEnabled ? "Disable app lock" : "Enable app lock"} onPress={handleAppLockToggle} variant={appLockEnabled ? "danger" : "primary"} disabled={!hasCredential} />
             <LuxuryButton label="Hide sensitive data" onPress={handleRelock} variant="ghost" disabled={!isRevealed} />
             <LuxuryButton label="Forget app lock" onPress={handleResetPrivacy} variant="danger" disabled={!hasCredential} />
           </View>

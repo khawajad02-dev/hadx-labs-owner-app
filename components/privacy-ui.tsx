@@ -190,6 +190,7 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
     hasCredential,
     credentialKind,
     biometricEnabled,
+    appLockEnabled,
     isInitializing,
     revealRequested,
     initialize,
@@ -344,7 +345,7 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
         resetKey={patternResetKey}
       />
       <CredentialModal
-        visible={hasCredential && isLocked}
+        visible={hasCredential && appLockEnabled && isLocked}
         title="Unlock Owner App"
         detail={`Use your saved ${credentialKind === "pattern" ? "pattern" : "password"}. Sensitive dashboard data stays hidden until you use the eye control.`}
         submitLabel="Unlock dashboard"
