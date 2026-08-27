@@ -4,7 +4,8 @@ import * as LocalAuthentication from "expo-local-authentication";
 import * as Crypto from "expo-crypto";
 import { Platform } from "react-native";
 
-const APP_CREDENTIAL_KEY = "hadx_owner_app_credential_v1";
+const APP_CREDENTIAL_KEY = "hadx_owner_app_credential_v2";
+const LEGACY_APP_CREDENTIAL_KEY = "hadx_owner_app_credential_v1";
 const BIOMETRIC_OPT_IN_KEY = "hadx_owner_biometric_enabled_v1";
 
 export type CredentialKind = "password" | "pattern";
@@ -207,7 +208,7 @@ export const usePrivacyStore = create<PrivacyState>((set, get) => ({
   },
 
   resetPrivacy: async () => {
-    await Promise.all([deleteValue(APP_CREDENTIAL_KEY), deleteValue(BIOMETRIC_OPT_IN_KEY)]);
+    await Promise.all([deleteValue(APP_CREDENTIAL_KEY), deleteValue(LEGACY_APP_CREDENTIAL_KEY), deleteValue(BIOMETRIC_OPT_IN_KEY)]);
     set({ hasCredential: false, credentialKind: null, isLocked: true, isRevealed: false, biometricEnabled: false, revealRequested: false });
   },
 }));

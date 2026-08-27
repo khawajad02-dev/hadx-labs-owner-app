@@ -20,6 +20,69 @@ import {
   type CredentialKind,
 } from "@/lib/stores/privacy-store";
 
+const PATTERN_DOTS = [
+  { x: 28, y: 28 }, { x: 88, y: 28 }, { x: 148, y: 28 },
+  { x: 28, y: 88 }, { x: 88, y: 88 }, { x: 148, y: 88 },
+  { x: 28, y: 148 }, { x: 88, y: 148 }, { x: 148, y: 148 },
+] as const;
+
+function PatternPad({
+  disabled,
+  onComplete,
+  resetKey,
+}: {
+  disabled: boolean;
+  onComplete: (pattern: string) => void;
+  resetKey: string;
+}) {
+  const [path, setPath] = useState<number[]>([]);
+
+  useEffect(() => {
+    setPath([]);
+  }, [resetKey]);
+
+  const dotAt = (x: number, y: number) => {
+    const index = PATTERN_DOTS.findIndex((dot) => Math.hypot(dot.x - x, dot.y - y) <= 22);
+    return index >= 0 ? index : null;
+  };
+
+  const addDot = (x: number, y: number) => {
+    if (disabled) return;
+    const index = dotAt(x, y);
+    if (index !== null && !path.includes(index)) setPath((current) => [...current, index]);
+  };
+
+  const finish = () => {
+    if (path.length >= 4) onComplete(path.join(""));
+    setPath([]);
+  };
+
+  return (
+    <View
+      accessibilityLabel="Draw your HADX app unlock pattern on the nine dots"
+      accessibilityRole="adjustable"
+      onStartShouldSetResponder={() => !disabled}
+      onResponderGrant={(event) => addDot(event.nativeEvent.locationX, event.nativeEvent.locationY)}
+      onResponderMove={(event) => addDot(event.nativeEvent.locationX, event.nativeEvent.locationY)}
+      onResponderRelease={finish}
+      style={[styles.patternPad, disabled && styles.patternDisabled]}
+    >
+      {path.slice(1).map((dotIndex, segmentIndex) => {
+        const from = PATTERN_DOTS[path[segmentIndex]];
+        const to = PATTERN_DOTS[dotIndex];
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const length = Math.hypot(dx, dy);
+        const angle = `${Math.atan2(dy, dx) * (180 / Math.PI)}deg`;
+        return <View key={`${path[segmentIndex]}-${dotIndex}`} style={[styles.patternLine, { left: from.x, top: from.y - 2, width: length, transform: [{ rotate: angle }] }]} />;
+      })}
+      {PATTERN_DOTS.map((dot, index) => (
+        <View key={index} style={[styles.patternDot, { left: dot.x - 13, top: dot.y - 13 }, path.includes(index) && styles.patternDotActive]} />
+      ))}
+    </View>
+  );
+}
+
 function CredentialModal({
   visible,
   title,
@@ -34,6 +97,7 @@ function CredentialModal({
   busy,
   error,
   onClose,
+  resetKey,
 }: {
   visible: boolean;
   title: string;
@@ -48,6 +112,7 @@ function CredentialModal({
   busy?: boolean;
   error: string;
   onClose?: () => void;
+  resetKey: string;
 }) {
   const colors = useColors();
   const [value, setValue] = useState("");
@@ -55,7 +120,7 @@ function CredentialModal({
 
   useEffect(() => {
     if (!visible) setValue("");
-  }, [visible]);
+  }, [visible, resetKey]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -83,22 +148,29 @@ function CredentialModal({
               </View>
             ) : null}
 
-            <TextInput
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoFocus
-              editable={!busy}
-              keyboardType={isPattern ? "number-pad" : "default"}
-              maxLength={isPattern ? 9 : 72}
-              onChangeText={(next) => setValue(isPattern ? next.replace(/[^1-9]/g, "") : next)}
-              onSubmitEditing={() => onSubmit(value)}
-              placeholder={isPattern ? "Join 4–9 dots, e.g. 14789" : "Create your private app password"}
-              placeholderTextColor={`${colors.muted}B3`}
-              returnKeyType="done"
-              secureTextEntry={!isPattern}
-              value={value}
-              style={[styles.credentialInput, { backgroundColor: `${colors.background}DD`, borderColor: colors.border, color: colors.foreground, letterSpacing: isPattern ? 4 : 0 }]}
-            />
+            {isPattern ? (
+              <>
+                <PatternPad disabled={Boolean(busy)} resetKey={resetKey} onComplete={setValue} />
+                <Text style={[styles.patternHint, { color: colors.muted }]}>{value ? `${value.length} dots connected. Press the button below.` : "Draw a pattern by connecting at least 4 dots."}</Text>
+              </>
+            ) : (
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+                editable={!busy}
+                keyboardType="default"
+                maxLength={72}
+                onChangeText={setValue}
+                onSubmitEditing={() => onSubmit(value)}
+                placeholder="Create your private app password"
+                placeholderTextColor={`${colors.muted}B3`}
+                returnKeyType="done"
+                secureTextEntry
+                value={value}
+                style={[styles.credentialInput, { backgroundColor: `${colors.background}DD`, borderColor: colors.border, color: colors.foreground }]}
+              />
+            )}
 
             {error ? <Text style={[styles.error, { color: colors.error }]}>{error}</Text> : null}
             {onBiometric && biometricEnabled ? <LuxuryButton label="Use fingerprint / face" onPress={onBiometric} loading={busy} variant="secondary" /> : null}
@@ -134,6 +206,9 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
   const [revealError, setRevealError] = useState("");
   const [revealModal, setRevealModal] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [setupPattern, setSetupPattern] = useState<string | null>(null);
+  const [patternSetupStep, setPatternSetupStep] = useState<"draw" | "confirm">("draw");
+  const [patternResetKey, setPatternResetKey] = useState("pattern-0");
 
   useEffect(() => {
     void initialize();
@@ -180,9 +255,23 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
 
   const submitSetup = async (secret: string) => {
     const normalized = secret.trim();
-    const valid = setupKind === "pattern" ? /^[1-9]{4,9}$/.test(normalized) && new Set(normalized).size >= 4 : normalized.length >= 8;
+    const valid = setupKind === "pattern" ? /^[0-8]{4,9}$/.test(normalized) && new Set(normalized).size >= 4 : normalized.length >= 8;
     if (!valid) {
-      setSetupError(setupKind === "pattern" ? "Use at least 4 different pattern dots." : "Use at least 8 characters for your app password.");
+      setSetupError(setupKind === "pattern" ? "Draw at least 4 different dots, then press OK." : "Use at least 8 characters for your app password.");
+      return;
+    }
+    if (setupKind === "pattern" && !setupPattern) {
+      setSetupPattern(normalized);
+      setPatternSetupStep("confirm");
+      setPatternResetKey(`pattern-${Date.now()}`);
+      setSetupError("Pattern saved. Draw the same pattern again, then press Done.");
+      return;
+    }
+    if (setupKind === "pattern" && setupPattern !== normalized) {
+      setSetupPattern(null);
+      setPatternSetupStep("draw");
+      setPatternResetKey(`pattern-${Date.now()}`);
+      setSetupError("Patterns do not match. Draw your pattern again, then press OK.");
       return;
     }
     setBusy(true);
@@ -249,13 +338,14 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
         visible={!hasCredential}
         title="Set your app lock"
         detail="Choose a saved HADX pattern or password. This is separate from your phone lock and is stored only on this device."
-        submitLabel="Save private lock"
+        submitLabel={setupKind === "pattern" ? (patternSetupStep === "draw" ? "OK — save pattern" : "Done — open app") : "Save private lock"}
         credentialKind={setupKind}
         allowKindChange
-        onKindChange={(kind) => { setSetupKind(kind); setSetupError(""); }}
+        onKindChange={(kind) => { setSetupKind(kind); setSetupPattern(null); setPatternSetupStep("draw"); setPatternResetKey(`pattern-${Date.now()}`); setSetupError(""); }}
         onSubmit={(value) => void submitSetup(value)}
         busy={busy}
         error={setupError}
+        resetKey={patternResetKey}
       />
       <CredentialModal
         visible={hasCredential && isLocked}
@@ -268,6 +358,7 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
         biometricEnabled={biometricEnabled}
         busy={busy}
         error={unlockError}
+        resetKey={`unlock-${credentialKind || "password"}`}
       />
       <CredentialModal
         visible={revealModal && !isRevealed}
@@ -281,6 +372,7 @@ export function PrivacyGate({ children }: { children: ReactNode }) {
         busy={busy}
         error={revealError}
         onClose={() => setRevealModal(false)}
+        resetKey={`reveal-${credentialKind || "password"}`}
       />
     </View>
   );
@@ -329,6 +421,12 @@ const styles = StyleSheet.create({
   kindButton: { flex: 1, minHeight: 42, borderWidth: 1, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   kindText: { fontSize: 13, fontWeight: "800" },
   credentialInput: { minHeight: 56, borderWidth: 1, borderRadius: 14, paddingHorizontal: 15, fontSize: 15 },
+  patternPad: { width: 204, height: 204, alignSelf: "center", borderRadius: 28, borderWidth: 1, borderColor: "rgba(212,175,55,0.34)", backgroundColor: "rgba(0,0,0,0.28)" },
+  patternDisabled: { opacity: 0.55 },
+  patternLine: { position: "absolute", height: 4, borderRadius: 2, backgroundColor: "#D4AF37", transformOrigin: "left center" },
+  patternDot: { position: "absolute", width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: "rgba(212,175,55,0.72)", backgroundColor: "rgba(10,10,10,0.86)" },
+  patternDotActive: { backgroundColor: "#D4AF37", borderColor: "#FFF3B0", shadowColor: "#D4AF37", shadowOpacity: 0.85, shadowRadius: 8, elevation: 5 },
+  patternHint: { textAlign: "center", fontSize: 12, lineHeight: 17 },
   error: { fontSize: 12, lineHeight: 18 },
   maskedValue: { minWidth: 56, minHeight: 20, overflow: "hidden", justifyContent: "center" },
   maskedText: { color: "#9B8A62", opacity: 0.7 },
