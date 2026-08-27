@@ -20,6 +20,7 @@ import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/componen
 import { useColors } from "@/hooks/use-colors";
 import { apiPost } from "@/lib/api-client";
 import { uploadPickedMedia, type PickedMedia } from "@/lib/media-upload";
+import { PRODUCT_SIZES } from "@/constants/product-sizes";
 
 type SelectedMedia = PickedMedia & { id: string };
 
@@ -66,6 +67,7 @@ export default function AddProductScreen() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [media, setMedia] = useState<SelectedMedia[]>([]);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [form, setForm] = useState({ title: "", sku: "", usdPrice: "", pkrPrice: "", inrPrice: "", description: "", category: "", stockQuantity: "10" });
 
   const updateForm = (field: keyof typeof form, value: string) => setForm((previous) => ({ ...previous, [field]: value }));
@@ -105,6 +107,10 @@ export default function AddProductScreen() {
       Alert.alert("Check stock quantity", "Stock must be zero or a positive number.");
       return;
     }
+    if (!selectedSizes.length) {
+      Alert.alert("Choose available sizes", "Select at least one size for this product.");
+      return;
+    }
 
     setLoading(true);
     setUploadProgress("");
@@ -122,6 +128,7 @@ export default function AddProductScreen() {
         price: usd,
         currency: "USD",
         regionalPrices: { USD: usd, PKR: pkr, INR: inr },
+        sizes: selectedSizes,
         media: uploadedMedia,
         imageUrl: uploadedMedia[0]?.url,
         description: form.description.trim() || undefined,
@@ -154,7 +161,7 @@ export default function AddProductScreen() {
 
         <LuxuryCard style={[styles.formCard, formShellStyle]}>
           <Text style={[styles.formTitle, { color: colors.foreground }]}>Product identity</Text><Text style={[styles.formDetail, { color: colors.muted }]}>SKU means Stock Keeping Unit: the unique internal code for finding and managing this product. You can generate it automatically.</Text>
-          <View style={styles.formGap}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Product title" value={form.title} onChangeText={(value) => updateForm("title", value)} placeholder="e.g. Obsidian Signature Tee" /><View style={styles.skuRow}><View style={styles.skuInput}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="SKU / internal product code" value={form.sku} onChangeText={(value) => updateForm("sku", value)} placeholder="HADX-OBSIDIAN-001" /></View><LuxuryButton label="Auto-generate" onPress={() => updateForm("sku", makeSku(form.title))} variant="ghost" style={styles.skuButton} disabled={loading} /></View><View style={styles.twoColumn}><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="USD (global base)" value={form.usdPrice} onChangeText={(value) => updateForm("usdPrice", value)} keyboardType="decimal-pad" placeholder="120" /></View><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="PKR (Pakistan)" value={form.pkrPrice} onChangeText={(value) => updateForm("pkrPrice", value)} keyboardType="decimal-pad" placeholder="35000" /></View></View><View style={styles.twoColumn}><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="INR (India)" value={form.inrPrice} onChangeText={(value) => updateForm("inrPrice", value)} keyboardType="decimal-pad" placeholder="10000" /></View><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Stock quantity" value={form.stockQuantity} onChangeText={(value) => updateForm("stockQuantity", value)} keyboardType="numeric" placeholder="10" /></View></View><Text style={[styles.priceNote, { color: colors.muted }]}>These are owner-set regional prices. Customers see the correct one based on their selected/ detected region; prices are not silently guessed from exchange rates.</Text><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Category" value={form.category} onChangeText={(value) => updateForm("category", value)} placeholder="Atelier" /><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Description" value={form.description} onChangeText={(value) => updateForm("description", value)} multiline placeholder="Tell the story of this piece…" /></View>
+          <View style={styles.formGap}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Product title" value={form.title} onChangeText={(value) => updateForm("title", value)} placeholder="e.g. Obsidian Signature Tee" /><View style={styles.skuRow}><View style={styles.skuInput}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="SKU / internal product code" value={form.sku} onChangeText={(value) => updateForm("sku", value)} placeholder="HADX-OBSIDIAN-001" /></View><LuxuryButton label="Auto-generate" onPress={() => updateForm("sku", makeSku(form.title))} variant="ghost" style={styles.skuButton} disabled={loading} /></View><View style={styles.twoColumn}><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="USD (global base)" value={form.usdPrice} onChangeText={(value) => updateForm("usdPrice", value)} keyboardType="decimal-pad" placeholder="120" /></View><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="PKR (Pakistan)" value={form.pkrPrice} onChangeText={(value) => updateForm("pkrPrice", value)} keyboardType="decimal-pad" placeholder="35000" /></View></View><View style={styles.twoColumn}><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="INR (India)" value={form.inrPrice} onChangeText={(value) => updateForm("inrPrice", value)} keyboardType="decimal-pad" placeholder="10000" /></View><View style={styles.column}><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Stock quantity" value={form.stockQuantity} onChangeText={(value) => updateForm("stockQuantity", value)} keyboardType="numeric" placeholder="10" /></View></View><Text style={[styles.priceNote, { color: colors.muted }]}>These are owner-set regional prices. Customers see the correct one based on their selected/ detected region; prices are not silently guessed from exchange rates.</Text><View style={styles.sizeGroup}><Text style={[styles.inputLabel, { color: colors.muted }]}>Available sizes</Text><Text style={[styles.sizeHint, { color: colors.muted }]}>Tap each size to add or remove it from this product.</Text><View style={styles.sizeGrid}>{PRODUCT_SIZES.map((size) => { const selected = selectedSizes.includes(size); return <Pressable key={size} onPress={() => setSelectedSizes((current) => selected ? current.filter((item) => item !== size) : [...current, size])} style={[styles.sizeChip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? `${colors.primary}20` : `${colors.background}CC` }]}><Text style={[styles.sizeTick, { color: selected ? colors.primary : colors.muted }]}>{selected ? "✓" : "○"}</Text><Text style={[styles.sizeText, { color: colors.foreground }]}>{size}</Text></Pressable>; })}</View></View><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Category" value={form.category} onChangeText={(value) => updateForm("category", value)} placeholder="Atelier" /><ProductInputField colors={colors} fieldStyle={fieldStyle} label="Description" value={form.description} onChangeText={(value) => updateForm("description", value)} multiline placeholder="Tell the story of this piece…" /></View>
         </LuxuryCard>
         <View style={[styles.footerActions, actionLayoutStyle]}><LuxuryButton label="Save draft" onPress={() => void handleSave("DRAFT")} variant="secondary" loading={loading} style={styles.footerButton} /><LuxuryButton label="Publish live" onPress={() => void handleSave("PUBLISHED")} variant="primary" loading={loading} style={styles.footerButton} /></View>
       </ScrollView>
@@ -203,6 +210,12 @@ const styles = StyleSheet.create({
   twoColumn: { flexDirection: "row", gap: 10 },
   column: { flex: 1 },
   priceNote: { fontSize: 11, lineHeight: 17, marginTop: -4 },
+  sizeGroup: { gap: 6 },
+  sizeHint: { fontSize: 11, lineHeight: 17 },
+  sizeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  sizeChip: { minWidth: 58, minHeight: 44, borderWidth: 1, borderRadius: 14, paddingHorizontal: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
+  sizeTick: { fontSize: 16, fontWeight: "900" },
+  sizeText: { fontSize: 13, fontWeight: "900", letterSpacing: 0.5 },
   footerActions: { flexDirection: "row", gap: 10 },
   footerButton: { flex: 1 },
   bentoShell: { borderRadius: 15, borderLeftWidth: 3 },
