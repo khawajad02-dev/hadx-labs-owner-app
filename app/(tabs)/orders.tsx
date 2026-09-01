@@ -28,6 +28,7 @@ interface Order {
   city?: string | null;
   country?: string | null;
   size?: string | null;
+  productColor?: string | null;
   productTitle: string;
   quantity: number;
   totalAmountInCents: number;
@@ -151,7 +152,7 @@ export default function OrdersScreen() {
       return;
     }
     const destination = [order.city, order.country].filter(Boolean).join(", ") || order.address;
-    const message = `Congratulations ${order.fullName}! Your HADX LABS parcel ${order.orderReference} has been received. ${order.productTitle}${order.size ? ` (size ${order.size})` : ""} is being prepared for delivery within 5–7 working days. Delivery destination: ${destination}. We will contact you if anything else is needed.`;
+    const message = `Congratulations ${order.fullName}! Your HADX LABS parcel ${order.orderReference} has been received. ${order.productTitle}${order.productColor ? ` (${order.productColor}` : order.size ? " (" : ""}${order.size ? `${order.productColor ? ", " : ""}size ${order.size}` : ""}${order.productColor || order.size ? ")" : ""} is being prepared for delivery within 5–7 working days. Delivery destination: ${destination}. We will contact you if anything else is needed.`;
     const url = `https://wa.me/${order.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
     Linking.openURL(url).catch(() => Alert.alert("Could not open WhatsApp", "Please check that WhatsApp is installed."));
   };
@@ -193,6 +194,10 @@ export default function OrdersScreen() {
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Piece</Text>
           <SensitiveValue revealed={isRevealed} style={[styles.detailValue, { color: colors.foreground }]}>{item.productTitle} × {item.quantity}</SensitiveValue>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={[styles.detailLabel, { color: colors.muted }]}>Color</Text>
+          <SensitiveValue revealed={isRevealed} style={[styles.detailValue, { color: colors.foreground }]}>{item.productColor || "Not recorded"}</SensitiveValue>
         </View>
         <View style={styles.detailRow}>
           <Text style={[styles.detailLabel, { color: colors.muted }]}>Size</Text>
