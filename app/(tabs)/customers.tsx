@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { router } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
@@ -127,7 +128,7 @@ export default function CustomersScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void fetchCustomers(); }} tintColor={colors.primary} colors={[colors.primary]} />}
-        ListHeaderComponent={<View style={styles.headerContent}><SectionHeading eyebrow="RELATIONSHIPS / CLIENT LEDGER" title="Clients" detail={isRevealed ? `${visibleCustomers.length.toLocaleString("en-US")} of ${customers.length.toLocaleString("en-US")} clients` : "•••• of •••• clients"} /><TextInput value={query} onChangeText={setQuery} placeholder="Search clients, email or phone" placeholderTextColor={`${colors.muted}B3`} returnKeyType="search" style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]} />{error ? <LuxuryCard compact style={styles.errorCard}><Text style={[styles.errorTitle, { color: colors.foreground }]}>Client feed paused</Text><Text style={[styles.errorText, { color: colors.muted }]}>{error}</Text><LuxuryButton label="Retry" onPress={() => void fetchCustomers()} variant="ghost" style={styles.retry} /></LuxuryCard> : null}</View>}
+        ListHeaderComponent={<View style={styles.headerContent}><SectionHeading eyebrow="RELATIONSHIPS / CLIENT LEDGER" title="Clients" detail={isRevealed ? `${visibleCustomers.length.toLocaleString("en-US")} of ${customers.length.toLocaleString("en-US")} clients` : "•••• of •••• clients"} /><LuxuryCard accent style={[styles.reviewRelay, { borderColor: `${colors.primary}66`, backgroundColor: `${colors.surface}CC` }]}><View style={[styles.reviewRelayOrb, { borderColor: `${colors.primary}AA`, backgroundColor: `${colors.primary}18` }]}><Text style={[styles.reviewRelayOrbText, { color: colors.primary }]}>★</Text></View><View style={styles.reviewRelayCopy}><Text style={[styles.reviewRelayTitle, { color: colors.foreground }]}>Product Reviews</Text><Text style={[styles.reviewRelayText, { color: colors.muted }]}>Open the animated customer voice archive.</Text></View><LuxuryButton label="OPEN" onPress={() => router.push("/review-archive")} variant="primary" style={styles.reviewRelayButton} /></LuxuryCard><TextInput value={query} onChangeText={setQuery} placeholder="Search clients, email or phone" placeholderTextColor={`${colors.muted}B3`} returnKeyType="search" style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]} />{error ? <LuxuryCard compact style={styles.errorCard}><Text style={[styles.errorTitle, { color: colors.foreground }]}>Client feed paused</Text><Text style={[styles.errorText, { color: colors.muted }]}>{error}</Text><LuxuryButton label="Retry" onPress={() => void fetchCustomers()} variant="ghost" style={styles.retry} /></LuxuryCard> : null}</View>}
         ListEmptyComponent={loading ? <View style={styles.empty}><ActivityIndicator size="large" color={colors.primary} /><Text style={[styles.emptyText, { color: colors.muted }]}>Opening client ledger…</Text></View> : <LuxuryCard accent style={styles.emptyCard}><Text style={[styles.emptyMark, { color: colors.primary }]}>H</Text><Text style={[styles.emptyTitle, { color: colors.foreground }]}>No clients in this view.</Text><Text style={[styles.emptyText, { color: colors.muted }]}>As orders arrive, customer relationships will appear here.</Text></LuxuryCard>}
       />
     </ScreenContainer>
@@ -137,6 +138,13 @@ export default function CustomersScreen() {
 const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 120, gap: 12 },
   headerContent: { gap: 14, marginBottom: 4 },
+  reviewRelay: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 22, padding: 12 },
+  reviewRelayOrb: { width: 44, height: 44, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center", shadowColor: "#D4AF37", shadowOpacity: 0.35, shadowRadius: 10, elevation: 5 },
+  reviewRelayOrbText: { fontSize: 20, fontWeight: "900" },
+  reviewRelayCopy: { flex: 1, gap: 3 },
+  reviewRelayTitle: { fontSize: 14, fontWeight: "900" },
+  reviewRelayText: { fontSize: 10, lineHeight: 15 },
+  reviewRelayButton: { minHeight: 38, paddingHorizontal: 12 },
   searchInput: { borderWidth: 1, borderRadius: 15, minHeight: 50, paddingHorizontal: 15, fontSize: 13 },
   customerCard: { gap: 14 },
   customerHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
