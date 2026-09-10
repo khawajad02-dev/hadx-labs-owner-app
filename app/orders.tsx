@@ -15,6 +15,7 @@ type Order = {
   phone: string;
   address: string;
   productTitle: string;
+  productColor?: string | null;
   quantity: number;
   totalAmountInCents: number;
   paymentStatus: string;
@@ -56,6 +57,7 @@ export default function OrdersScreen() {
           <View className="rounded-xl p-4" style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}>
             <Text className="font-bold" style={{ color: colors.foreground }}>{item.orderReference}</Text>
             <Text style={{ color: colors.foreground }}>{item.productTitle} × {item.quantity}</Text>
+            <Text style={{ color: colors.muted }}>Color: {item.productColor || "Not recorded"}</Text>
             <Text style={{ color: colors.muted }}>{item.fullName} · {item.phone}</Text>
             <Text style={{ color: colors.muted }}>{item.address}</Text>
             <Text style={{ color: colors.primary }}>PKR {(item.totalAmountInCents / 100).toLocaleString()} · COD · {item.orderStatus}</Text>
