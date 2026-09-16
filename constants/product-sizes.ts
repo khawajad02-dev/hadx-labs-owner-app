@@ -1,2 +1,2 @@
-export const PRODUCT_SIZES = ["S", "M", "L", "XL", "XXL"] as const;
+export const PRODUCT_SIZES = ["S", "M", "L", "XL", "XXL", "XXXL"] as const;
 export type ProductSize = (typeof PRODUCT_SIZES)[number];
