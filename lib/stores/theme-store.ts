@@ -149,13 +149,15 @@ interface ThemeStore {
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set) => ({
-      currentTheme: "hadx-cyber-luxury",
+      currentTheme: "liquid-monogram",
       setTheme: (theme) => set({ currentTheme: theme }),
       getThemeConfig: (theme) => THEME_CONFIGS[theme],
     }),
     {
       name: "theme-storage",
       storage: createJSONStorage(() => AsyncStorage),
+      version: 2,
+      migrate: () => ({ currentTheme: "liquid-monogram" as ThemeType }),
     },
   ),
 );

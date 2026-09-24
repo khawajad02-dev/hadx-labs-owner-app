@@ -19,10 +19,7 @@ import { THEME_CONFIGS, useThemeStore, type ThemeType } from "@/lib/stores/theme
 import { getBiometricAvailability, usePrivacyStore } from "@/lib/stores/privacy-store";
 import { Linking } from "react-native";
 
-const THEME_OPTIONS = Object.entries(THEME_CONFIGS).map(([id, config]) => ({
-  id: id as ThemeType,
-  ...config,
-}));
+const THEME_OPTIONS = [{ id: "liquid-monogram" as ThemeType, ...THEME_CONFIGS["liquid-monogram"] }];
 
 const OWNER_APP_DOWNLOAD_URL = "https://github.com/khawajad02-dev/hadx-labs-owner-app/releases/latest";
 
