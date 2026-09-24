@@ -52,6 +52,18 @@ function ThemeBackdrop() {
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+      {isLiquid ? [
+        { left: "13%", top: "24%", size: 22, start: -16, end: 28, delay: 0 },
+        { left: "78%", top: "32%", size: 14, start: 18, end: -26, delay: 0.18 },
+        { left: "23%", top: "57%", size: 11, start: 20, end: -18, delay: 0.32 },
+        { left: "70%", top: "68%", size: 28, start: -22, end: 22, delay: 0.48 },
+        { left: "48%", top: "82%", size: 9, start: 14, end: -16, delay: 0.64 },
+      ].map((drop) => (
+        <Animated.View
+          key={`${drop.left}-${drop.top}`}
+          style={[styles.waterDrop, { left: drop.left as `${number}%`, top: drop.top as `${number}%`, width: drop.size, height: drop.size, borderRadius: drop.size / 2, borderColor: colors.accent, transform: [{ translateY: motion.interpolate({ inputRange: [0, 1], outputRange: [drop.start, drop.end] }) }, { scale: motion.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.72, 1.12, 0.82] }) }], opacity: motion.interpolate({ inputRange: [0, 0.35, 0.7, 1], outputRange: [0.22, 0.74, 0.48, 0.18] }) }]}
+        />
+      )) : null}
       <Animated.View
         style={[
           styles.backdropArt,
@@ -161,7 +173,7 @@ export function LuxuryScene({ children }: { children: ReactNode }) {
 
   return (
     <View style={[styles.scene, { backgroundColor: colors.background }]}>
-      {colors.backgroundImage ? <ImageBackground source={colors.backgroundImage} resizeMode="cover" style={StyleSheet.absoluteFillObject} /> : null}
+      {colors.backgroundImage ? <ImageBackground source={colors.backgroundImage} resizeMode="contain" style={styles.logoBackdrop} imageStyle={styles.logoBackdropImage} /> : null}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -270,6 +282,14 @@ export function LuxuryButton({
   const isNeumorphic = colors.themeId === "neumorphic-luxe";
   const isLiquid = colors.themeId === "liquid-monogram";
   const buttonRadius = colors.themeId === "bento-telemetry" ? 12 : isSpatial ? 20 : isTerminal ? 7 : isNeumorphic ? 22 : 16;
+  const liquidPulse = useRef(new Animated.Value(0)).current;
+  const handlePress = () => {
+    if (isLiquid) {
+      liquidPulse.setValue(0);
+      Animated.timing(liquidPulse, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    }
+    onPress();
+  };
   const palette = {
     primary: { backgroundColor: isLiquid ? "rgba(244, 201, 107, 0.24)" : colors.primary, borderColor: colors.primary, textColor: isLiquid ? colors.foreground : colors.background },
     secondary: { backgroundColor: isLiquid ? "rgba(255, 255, 255, 0.08)" : colors.surface, borderColor: colors.border, textColor: colors.foreground },
@@ -282,7 +302,7 @@ export function LuxuryButton({
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || loading }}
       disabled={disabled || loading}
-      onPress={onPress}
+      onPress={handlePress}
       style={({ pressed }) => [
         styles.button,
         {
@@ -301,6 +321,7 @@ export function LuxuryButton({
         style,
       ]}
     >
+      {isLiquid ? <Animated.View pointerEvents="none" style={[styles.liquidButtonDrop, { backgroundColor: colors.accent, opacity: liquidPulse.interpolate({ inputRange: [0, 0.18, 1], outputRange: [0, 0.38, 0] }), transform: [{ scale: liquidPulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 6] }) }] }]} /> : null}
       {icon ? <View style={styles.buttonIcon}>{icon}</View> : null}
       <Text style={[styles.buttonLabel, { color: palette.textColor, textTransform: isTerminal ? "uppercase" : "none", letterSpacing: isTerminal ? 0.9 : 0.2 }, labelStyle]}>
         {loading ? "Working…" : label}
@@ -448,6 +469,9 @@ const styles = StyleSheet.create({
   sceneContent: { flex: 1 },
   ambientOrb: { position: "absolute", width: 300, height: 300, borderRadius: 150, top: -130, right: -120 },
   ambientOrbSmall: { position: "absolute", width: 210, height: 210, borderRadius: 105, bottom: 50, left: -120 },
+  logoBackdrop: { position: "absolute", width: "76%", height: "46%", top: "25%", left: "12%", opacity: 0.72 },
+  logoBackdropImage: { resizeMode: "contain" },
+  waterDrop: { position: "absolute", backgroundColor: "rgba(255, 247, 213, 0.08)", borderWidth: 1, shadowColor: "#F4C96B", shadowOpacity: 0.7, shadowRadius: 12, elevation: 4 },
   card: {
     borderRadius: 24,
     borderWidth: 1,
@@ -470,6 +494,7 @@ const styles = StyleSheet.create({
   },
   buttonIcon: { alignItems: "center", justifyContent: "center" },
   buttonLabel: { fontSize: 14, fontWeight: "800", letterSpacing: 0.2 },
+  liquidButtonDrop: { position: "absolute", width: 26, height: 26, borderRadius: 13, left: "50%", top: "50%", marginLeft: -13, marginTop: -13 },
   headingRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
   headingCopy: { flex: 1, gap: 4 },
   eyebrow: { fontSize: 11, fontWeight: "800", letterSpacing: 2.4, textTransform: "uppercase" },
