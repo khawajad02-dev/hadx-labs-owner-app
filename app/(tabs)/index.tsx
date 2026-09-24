@@ -66,6 +66,10 @@ export default function DashboardScreen() {
     } catch (requestError: any) {
       console.error("Error fetching dashboard metrics:", requestError);
       setMetrics(null);
+      if (requestError?.response?.status === 401) {
+        router.replace("/security-vault");
+        return;
+      }
       setError(requestError?.response?.data?.error || "Live metrics are temporarily unavailable.");
     } finally {
       setLoading(false);
