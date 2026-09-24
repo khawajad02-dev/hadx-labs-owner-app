@@ -35,8 +35,11 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
 
   apiClient.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
       console.error("Owner API error:", error.response?.status, error.response?.data);
+      if (error.response?.status === 401) {
+        await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
+      }
       return Promise.reject(error);
     },
   );

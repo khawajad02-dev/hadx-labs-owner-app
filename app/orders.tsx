@@ -3,9 +3,7 @@ import { ActivityIndicator, FlatList, RefreshControl, Text, View } from "react-n
 import { useFocusEffect } from "expo-router";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? process.env.EXPO_PUBLIC_API_BASE_URL ?? "";
-const ADMIN_SECRET = process.env.EXPO_PUBLIC_ADMIN_SECRET ?? "";
+import { apiGet } from "@/lib/api-client";
 
 type Order = {
   id: string;
@@ -32,11 +30,8 @@ export default function OrdersScreen() {
   const loadOrders = useCallback(async (refresh = false) => {
     refresh ? setRefreshing(true) : setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/admin/orders`, {
-        headers: { "x-admin-secret": ADMIN_SECRET },
-      });
-      const data = await response.json();
-      if (response.ok) setOrders(data.orders ?? []);
+      const response = await apiGet("/orders");
+      setOrders(response.data?.orders ?? []);
     } finally {
       refresh ? setRefreshing(false) : setLoading(false);
     }
