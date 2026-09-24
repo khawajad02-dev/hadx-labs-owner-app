@@ -11,6 +11,7 @@ type LuxuryPalette = ThemeColorPalette & {
   themeId: string;
   themeName: string;
   themeDescription: string;
+  backgroundImage?: number;
   motion: {
     floatDuration: number;
     glowOpacity: number;
@@ -39,6 +40,7 @@ export function useColors(): LuxuryPalette {
       border: palette.border,
       themeName: config.name,
       themeDescription: config.description,
+      backgroundImage: config.backgroundImage,
       motion: config.motion,
     } as LuxuryPalette;
   }, [currentTheme, getThemeConfig]);

@@ -1,6 +1,7 @@
 import {
   Animated,
   Easing,
+  ImageBackground,
   Pressable,
   StyleSheet,
   Text,
@@ -46,6 +47,7 @@ function ThemeBackdrop() {
   const isSpatial = colors.themeId === "visionos-spatial";
   const isTerminal = colors.themeId === "cyberpunk-terminal";
   const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const isLiquid = colors.themeId === "liquid-monogram";
   const isCyber = !isBento && !isSpatial && !isTerminal && !isNeumorphic;
 
   return (
@@ -70,7 +72,7 @@ function ThemeBackdrop() {
           <Rect x="0" y="0" width="400" height="820" fill={colors.background} opacity={0.01} />
           <Rect x="0" y="0" width="400" height="820" fill="url(#themeGlow)" />
 
-          {isCyber ? (
+          {isLiquid ? null : isCyber ? (
             <G fill="none" strokeLinecap="round">
               <Circle cx="200" cy="405" r="268" stroke={colors.primary} strokeOpacity={0.14} strokeWidth="1" />
               <Circle cx="200" cy="405" r="214" stroke={colors.accent} strokeOpacity={0.22} strokeWidth="1.4" strokeDasharray="2 12" />
@@ -159,13 +161,14 @@ export function LuxuryScene({ children }: { children: ReactNode }) {
 
   return (
     <View style={[styles.scene, { backgroundColor: colors.background }]}>
+      {colors.backgroundImage ? <ImageBackground source={colors.backgroundImage} resizeMode="cover" style={StyleSheet.absoluteFillObject} /> : null}
       <Animated.View
         pointerEvents="none"
         style={[
           styles.ambientOrb,
           {
             backgroundColor: colors.primary,
-            opacity: 0.14,
+            opacity: colors.themeId === "liquid-monogram" ? 0.06 : 0.14,
             transform: [{ translateX }, { translateY }, { scale: 1.05 }],
           },
         ]}
@@ -204,6 +207,7 @@ export function LuxuryCard({
   const isSpatial = colors.themeId === "visionos-spatial";
   const isTerminal = colors.themeId === "cyberpunk-terminal";
   const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const isLiquid = colors.themeId === "liquid-monogram";
   const radius = isBento ? 15 : isSpatial ? 30 : isTerminal ? 9 : isNeumorphic ? 21 : 24;
   const contentPadding = isBento ? 14 : isSpatial ? 22 : isTerminal ? 12 : isNeumorphic ? 20 : 18;
 
@@ -214,14 +218,14 @@ export function LuxuryCard({
         compact && styles.cardCompact,
         {
           borderRadius: radius,
-          backgroundColor: colors.surface,
+          backgroundColor: isLiquid ? "rgba(10, 9, 7, 0.58)" : colors.surface,
           borderColor: accent ? colors.primary : colors.border,
           borderWidth: isTerminal ? 1.4 : 1,
           borderLeftWidth: isTerminal ? 3 : 1,
           borderTopWidth: accent || (!isTerminal && colors.themeId === "hadx-cyber-luxury") ? 2 : 1,
           shadowColor: colors.primary,
-          shadowOpacity: accent ? colors.motion.glowOpacity * 0.22 : isNeumorphic ? 0.24 : 0.12,
-          shadowRadius: isSpatial ? 30 : isNeumorphic ? 18 : 26,
+          shadowOpacity: isLiquid ? 0.34 : accent ? colors.motion.glowOpacity * 0.22 : isNeumorphic ? 0.24 : 0.12,
+          shadowRadius: isLiquid ? 34 : isSpatial ? 30 : isNeumorphic ? 18 : 26,
         },
         style,
       ]}
@@ -264,10 +268,11 @@ export function LuxuryButton({
   const isTerminal = colors.themeId === "cyberpunk-terminal";
   const isSpatial = colors.themeId === "visionos-spatial";
   const isNeumorphic = colors.themeId === "neumorphic-luxe";
+  const isLiquid = colors.themeId === "liquid-monogram";
   const buttonRadius = colors.themeId === "bento-telemetry" ? 12 : isSpatial ? 20 : isTerminal ? 7 : isNeumorphic ? 22 : 16;
   const palette = {
-    primary: { backgroundColor: colors.primary, borderColor: colors.primary, textColor: colors.background },
-    secondary: { backgroundColor: colors.surface, borderColor: colors.border, textColor: colors.foreground },
+    primary: { backgroundColor: isLiquid ? "rgba(244, 201, 107, 0.24)" : colors.primary, borderColor: colors.primary, textColor: isLiquid ? colors.foreground : colors.background },
+    secondary: { backgroundColor: isLiquid ? "rgba(255, 255, 255, 0.08)" : colors.surface, borderColor: colors.border, textColor: colors.foreground },
     ghost: { backgroundColor: "transparent", borderColor: colors.border, textColor: colors.accent },
     danger: { backgroundColor: "#351A1A", borderColor: colors.error, textColor: "#FFD1CC" },
   }[variant];
@@ -291,7 +296,7 @@ export function LuxuryButton({
           shadowRadius: isNeumorphic ? 10 : 0,
           elevation: isNeumorphic ? 3 : 0,
           opacity: disabled || loading ? 0.55 : 1,
-          transform: [{ scale: pressed ? (isNeumorphic ? 0.94 : 0.97) : 1 }],
+          transform: [{ scale: pressed ? (isLiquid || isNeumorphic ? 0.94 : 0.97) : 1 }, { translateY: pressed && isLiquid ? 2 : 0 }],
         },
         style,
       ]}

@@ -7,11 +7,13 @@ export type ThemeType =
   | "bento-telemetry"
   | "visionos-spatial"
   | "cyberpunk-terminal"
-  | "neumorphic-luxe";
+  | "neumorphic-luxe"
+  | "liquid-monogram";
 
 export interface ThemeConfig {
   name: string;
   description: string;
+  backgroundImage?: number;
   colors: {
     primary: string;
     background: string;
@@ -117,6 +119,24 @@ export const THEME_CONFIGS: Record<ThemeType, ThemeConfig> = {
       error: "#E78178",
     },
     motion: { floatDuration: 6000, glowOpacity: 0.35, depth: 1.25, scanline: false },
+  },
+  "liquid-monogram": {
+    name: "Liquid Monogram",
+    description: "A floating water-glass control room built around the HADX gold mark.",
+    backgroundImage: require("@/assets/images/hadx-liquid-monogram.png"),
+    colors: {
+      primary: "#F4C96B",
+      background: "#020202",
+      surface: "rgba(18, 16, 12, 0.58)",
+      foreground: "#FFF6D8",
+      muted: "#C0AC7D",
+      border: "rgba(244, 201, 107, 0.42)",
+      accent: "#FFF0B0",
+      success: "#8FE3B1",
+      warning: "#F4C96B",
+      error: "#F28B82",
+    },
+    motion: { floatDuration: 5400, glowOpacity: 0.78, depth: 1.4, scanline: false },
   },
 };
 
