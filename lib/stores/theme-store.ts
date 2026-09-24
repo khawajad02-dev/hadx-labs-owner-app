@@ -157,7 +157,11 @@ export const useThemeStore = create<ThemeStore>()(
       name: "theme-storage",
       storage: createJSONStorage(() => AsyncStorage),
       version: 2,
-      migrate: () => ({ currentTheme: "liquid-monogram" as ThemeType }),
+      migrate: (persistedState) => {
+        const savedTheme = (persistedState as { currentTheme?: ThemeType } | undefined)?.currentTheme;
+        const allowedThemes: ThemeType[] = ["hadx-cyber-luxury", "cyberpunk-terminal", "liquid-monogram"];
+        return { currentTheme: savedTheme && allowedThemes.includes(savedTheme) ? savedTheme : "liquid-monogram" };
+      },
     },
   ),
 );

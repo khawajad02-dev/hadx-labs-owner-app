@@ -38,6 +38,9 @@ importers:
       '@trpc/server':
         specifier: 11.7.2
         version: 11.7.2(typescript@5.9.3)
+      '@ventur8/react-native-liquid-glass-tab-bar':
+        specifier: ^1.0.1
+        version: 1.0.1(mcsvf55lpj5urgzreelllnbzfa)
       axios:
         specifier: ^1.13.2
         version: 1.13.2
@@ -2478,6 +2481,16 @@ packages:
     resolution: {integrity: sha512-TQMCz2pFJMfpNxmSfX1VSfTjwUIFx/mL+p1bnfM1xjjdla7Z+KnGMW/EhFbpckp3LyWAH4PgOsMwOMnIN+MBFg==}
     peerDependencies:
       '@urql/core': ^5.0.0
+
+  '@ventur8/react-native-liquid-glass-tab-bar@1.0.1':
+    resolution: {integrity: sha512-lAIZxNeqlsRU1WRL7UIcCjPKXAQ6g1n7nqd6d64PI71TlTHJCV2HxP63fjPQQEObqfowqosGqiy29q3WjoLTnw==}
+    peerDependencies:
+      '@react-navigation/bottom-tabs': '*'
+      expo-blur: '*'
+      react: '*'
+      react-native: '*'
+      react-native-reanimated: '*'
+      react-native-safe-area-context: '*'
 
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
@@ -8542,6 +8555,15 @@ snapshots:
     dependencies:
       '@urql/core': 5.2.0
       wonka: 6.3.5
+
+  '@ventur8/react-native-liquid-glass-tab-bar@1.0.1(mcsvf55lpj5urgzreelllnbzfa)':
+    dependencies:
+      '@react-navigation/bottom-tabs': 7.8.12(@react-navigation/native@7.1.25(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native-safe-area-context@5.6.2(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native-screens@4.16.0(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      expo-blur: 15.0.8(expo@54.0.29)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      react: 19.1.0
+      react-native: 0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0)
+      react-native-reanimated: 4.1.6(@babel/core@7.28.5)(react-native-worklets@0.5.1(@babel/core@7.28.5)(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+      react-native-safe-area-context: 5.6.2(react-native@0.81.5(@babel/core@7.28.5)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
 
   '@vitest/expect@2.1.9':
     dependencies:

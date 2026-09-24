@@ -29,6 +29,7 @@
     "@trpc/client": "11.7.2",
     "@trpc/react-query": "11.7.2",
     "@trpc/server": "11.7.2",
+    "@ventur8/react-native-liquid-glass-tab-bar": "^1.0.1",
     "axios": "^1.13.2",
     "base64-arraybuffer": "^1.0.2",
     "clsx": "^2.1.1",
