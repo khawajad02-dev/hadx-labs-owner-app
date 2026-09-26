@@ -2,6 +2,7 @@ import {
   Animated,
   Easing,
   ImageBackground,
+  PanResponder,
   Pressable,
   StyleSheet,
   Text,
@@ -20,7 +21,7 @@ import Svg, {
   Rect,
   Stop,
 } from "react-native-svg";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import { useColors } from "@/hooks/use-colors";
 
@@ -145,7 +146,29 @@ function ThemeBackdrop() {
 
 export function LuxuryScene({ children }: { children: ReactNode }) {
   const colors = useColors();
+  const isLiquid = colors.themeId === "liquid-monogram";
   const drift = useRef(new Animated.Value(0)).current;
+  const swipeX = useRef(new Animated.Value(0)).current;
+  const swipeRipple = useRef(new Animated.Value(0)).current;
+  const liquidPan = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          isLiquid && Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+        onPanResponderMove: (_, gesture) => swipeX.setValue(Math.max(-180, Math.min(180, gesture.dx))),
+        onPanResponderRelease: () => {
+          Animated.parallel([
+            Animated.spring(swipeX, { toValue: 0, useNativeDriver: true, friction: 7, tension: 55 }),
+            Animated.sequence([
+              Animated.timing(swipeRipple, { toValue: 1, duration: 180, useNativeDriver: true }),
+              Animated.timing(swipeRipple, { toValue: 0, duration: 620, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            ]),
+          ]).start();
+        },
+        onPanResponderTerminate: () => Animated.spring(swipeX, { toValue: 0, useNativeDriver: true }).start(),
+      }),
+    [isLiquid, swipeRipple, swipeX],
+  );
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -171,9 +194,16 @@ export function LuxuryScene({ children }: { children: ReactNode }) {
   const translateX = drift.interpolate({ inputRange: [0, 1], outputRange: [-12, 14] });
   const translateY = drift.interpolate({ inputRange: [0, 1], outputRange: [8, -10] });
 
+  const logoTranslateX = swipeX.interpolate({ inputRange: [-180, 0, 180], outputRange: [-16, 0, 16] });
+  const logoScaleX = swipeX.interpolate({ inputRange: [-180, 0, 180], outputRange: [0.94, 1, 0.94] });
+  const logoScaleY = swipeX.interpolate({ inputRange: [-180, 0, 180], outputRange: [1.04, 1, 1.04] });
+  const logoRotate = swipeX.interpolate({ inputRange: [-180, 0, 180], outputRange: ["-2deg", "0deg", "2deg"] });
+  const rippleScale = swipeRipple.interpolate({ inputRange: [0, 1], outputRange: [0.72, 2.8] });
+  const rippleOpacity = swipeRipple.interpolate({ inputRange: [0, 0.18, 1], outputRange: [0, 0.42, 0] });
   return (
-    <View style={[styles.scene, { backgroundColor: colors.background }]}>
-      {colors.backgroundImage ? <ImageBackground source={colors.backgroundImage} resizeMode="contain" style={styles.logoBackdrop} imageStyle={styles.logoBackdropImage} /> : null}
+    <View {...(isLiquid ? liquidPan.panHandlers : {})} style={[styles.scene, { backgroundColor: colors.background }]}>
+      {colors.backgroundImage ? <Animated.View pointerEvents="none" style={[styles.logoBackdrop, { transform: [{ translateX: logoTranslateX }, { scaleX: logoScaleX }, { scaleY: logoScaleY }, { rotate: logoRotate }] }]}><ImageBackground source={colors.backgroundImage} resizeMode="contain" style={StyleSheet.absoluteFillObject} imageStyle={styles.logoBackdropImage} /></Animated.View> : null}
+      {isLiquid ? <Animated.View pointerEvents="none" style={[styles.liquidSwipeRipple, { borderColor: colors.accent, opacity: rippleOpacity, transform: [{ translateX: logoTranslateX }, { scale: rippleScale }] }]} /> : null}
       <Animated.View
         pointerEvents="none"
         style={[
@@ -469,8 +499,9 @@ const styles = StyleSheet.create({
   sceneContent: { flex: 1 },
   ambientOrb: { position: "absolute", width: 300, height: 300, borderRadius: 150, top: -130, right: -120 },
   ambientOrbSmall: { position: "absolute", width: 210, height: 210, borderRadius: 105, bottom: 50, left: -120 },
-  logoBackdrop: { position: "absolute", width: "76%", height: "46%", top: "25%", left: "12%", opacity: 0.72 },
+  logoBackdrop: { position: "absolute", width: "92%", height: "74%", top: "13%", left: "4%", opacity: 0.62 },
   logoBackdropImage: { resizeMode: "contain" },
+  liquidSwipeRipple: { position: "absolute", width: 260, height: 260, borderRadius: 130, borderWidth: 1.5, top: "31%", left: "50%", marginLeft: -130, shadowColor: "#FFF0B0", shadowOpacity: 0.8, shadowRadius: 26 },
   waterDrop: { position: "absolute", backgroundColor: "rgba(255, 247, 213, 0.08)", borderWidth: 1, shadowColor: "#F4C96B", shadowOpacity: 0.7, shadowRadius: 12, elevation: 4 },
   card: {
     borderRadius: 24,
