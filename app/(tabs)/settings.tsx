@@ -24,7 +24,7 @@ const THEME_OPTIONS = (["hadx-cyber-luxury", "cyberpunk-terminal", "liquid-monog
   ...THEME_CONFIGS[id],
 }));
 
-const OWNER_APP_DOWNLOAD_URL = "https://github.com/khawajad02-dev/hadx-labs-owner-app/releases/latest";
+const OWNER_APP_DOWNLOAD_URL = "https://github.com/khawajad02-dev/hadx-labs-owner-app/releases/latest/download/app-release.apk";
 
 function PresetPreview({ themeId, selected }: { themeId: ThemeType; selected: boolean }) {
   const config = THEME_CONFIGS[themeId];
@@ -203,7 +203,7 @@ export default function SettingsScreen() {
             <Image source={require("@/assets/images/owner-app-download-qr.png")} style={styles.qrImage} resizeMode="contain" accessibilityLabel="QR code for the latest HADX LABS Owner App release" />
           </View>
           <Text style={[styles.qrTitle, { color: colors.foreground }]}>HADX OWNER APP</Text>
-          <Text style={[styles.qrDetail, { color: colors.muted }]}>Scan with the other phone. Android will open the release page, where the APK can be downloaded and installed with the phone’s permission.</Text>
+          <Text style={[styles.qrDetail, { color: colors.muted }]}>Scan with the other phone. This fixed link always downloads the latest Owner App APK after a new release is published.</Text>
           <LuxuryButton label="Open install page" onPress={() => void openOwnerAppDownload()} variant="secondary" style={styles.qrButton} />
         </LuxuryCard>
 
