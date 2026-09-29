@@ -159,7 +159,7 @@ export default function DashboardScreen() {
             <SensitiveValue revealed={isRevealed} style={[styles.metricValueLarge, { color: colors.primary }]}>
               {typeof metrics?.totalOrders === "number" ? metrics.totalOrders.toLocaleString("en-US") : "—"}
             </SensitiveValue>
-            <Text style={[styles.metricHint, { color: colors.muted }]}>All statuses</Text>
+            <Text style={[styles.metricHint, { color: colors.muted }]}>Active queue</Text>
           </LuxuryCard>
           <LuxuryCard compact style={[styles.metricCard, isTerminal ? styles.terminalMetricCard : isSpatial ? styles.spatialMetricCard : isBento ? styles.bentoMetricCard : isNeumorphic ? styles.neumorphicMetricCard : undefined]}>
             <Text style={[styles.metricLabel, { color: colors.muted }]}>Products</Text>
@@ -182,6 +182,12 @@ export default function DashboardScreen() {
             label="Review orders"
             onPress={() => router.push("/(tabs)/orders")}
             variant="secondary"
+            style={styles.actionButton}
+          />
+          <LuxuryButton
+            label="Order history"
+            onPress={() => router.push("/order-history")}
+            variant="ghost"
             style={styles.actionButton}
           />
           <LuxuryButton

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
@@ -71,6 +72,7 @@ function toneForStatus(status: string): "success" | "warning" | "danger" | "neut
 }
 
 export default function OrdersScreen() {
+  const router = useRouter();
   const colors = useColors();
   const themeCardStyle = colors.themeId === "bento-telemetry"
     ? styles.bentoCard
@@ -137,11 +139,15 @@ export default function OrdersScreen() {
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     const previous = orders;
-    setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, orderStatus: newStatus } : order)));
+    setOrders((current) => newStatus === "DELIVERED"
+      ? current.filter((order) => order.id !== orderId)
+      : current.map((order) => (order.id === orderId ? { ...order, orderStatus: newStatus } : order)));
+    if (newStatus === "DELIVERED") setTotal((current) => Math.max(current - 1, 0));
     try {
       await apiPut(`/orders/${orderId}`, { orderStatus: newStatus });
     } catch (requestError: any) {
       setOrders(previous);
+      if (newStatus === "DELIVERED") setTotal((current) => current + 1);
       Alert.alert("Could not update order", requestError?.response?.data?.error || "Try again when the connection is restored.");
     }
   };
@@ -225,6 +231,7 @@ export default function OrdersScreen() {
       </View>
       <View style={[styles.actionRow, themeActionStyle]}>
         {item.orderStatus === "RESERVED" ? <LuxuryButton label="Confirm" onPress={() => void updateOrderStatus(item.id, "CONFIRMED")} variant="primary" style={styles.actionButton} /> : null}
+        {item.orderStatus === "CONFIRMED" ? <LuxuryButton label="✓ Delivered" onPress={() => void updateOrderStatus(item.id, "DELIVERED")} variant="primary" style={styles.actionButton} /> : null}
         {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item.id, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
         <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" disabled={!isRevealed} style={styles.actionButton} />
         {item.orderStatus === "CANCELLED" || item.orderStatus === "EXPIRED" ? <LuxuryButton label="Delete test" onPress={() => deleteCancelledTestOrder(item)} variant="danger" style={styles.actionButton} /> : null}
@@ -257,6 +264,7 @@ export default function OrdersScreen() {
               style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
             />
             <LuxuryButton label="Refresh order queue" onPress={() => { setRefreshing(true); void fetchOrders(false); }} variant="ghost" style={styles.refreshButton} />
+            <LuxuryButton label="Order history" onPress={() => router.push("/order-history")} variant="secondary" style={styles.refreshButton} />
             <View style={[styles.filterRow, themeFilterStyle]}>
               {FILTERS.map((item) => (
                 <LuxuryButton
