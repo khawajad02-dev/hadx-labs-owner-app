@@ -25,6 +25,7 @@ import { apiGet } from "@/lib/api-client";
 
 interface DashboardMetrics {
   revenueToday: number;
+  revenueCurrency?: string;
   activeUsers: number;
   serverStatus: string;
   databaseHealth: string;
@@ -32,9 +33,11 @@ interface DashboardMetrics {
   totalProducts: number;
 }
 
-function formatCurrency(value: number | undefined) {
+function formatCurrency(value: number | undefined, currency = "USD") {
   if (typeof value !== "number" || !Number.isFinite(value)) return "—";
-  return `$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  const normalized = currency.toUpperCase();
+  const prefix = normalized === "PKR" ? "PKR " : normalized === "INR" ? "₹" : normalized === "EUR" ? "€" : "$";
+  return `${prefix}${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 function statusTone(value: string | undefined): "success" | "warning" | "danger" | "neutral" {
@@ -134,7 +137,7 @@ export default function DashboardScreen() {
         <LuxuryCard accent style={styles.heroCard}>
           <SectionHeading
             eyebrow="TODAY / PERFORMANCE"
-            title={metrics ? (isRevealed ? formatCurrency(metrics.revenueToday) : "••••••") : "—"}
+            title={metrics ? (isRevealed ? formatCurrency(metrics.revenueToday, metrics.revenueCurrency) : "••••••") : "—"}
             detail="Revenue captured today"
           />
           <View style={styles.heroLowerRow}>

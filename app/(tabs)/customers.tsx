@@ -29,6 +29,7 @@ interface Customer {
   country?: string | null;
   latestProductTitle?: string | null;
   latestSize?: string | null;
+  currency?: string | null;
   totalOrders: number;
   lifetimeValue: number;
   lastOrderDate?: string;
@@ -36,6 +37,12 @@ interface Customer {
 
 function initials(name: string) {
   return name.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "H";
+}
+
+function formatCustomerValue(value: number, currency = "USD") {
+  const normalized = currency.toUpperCase();
+  const prefix = normalized === "PKR" ? "PKR " : normalized === "INR" ? "₹" : normalized === "EUR" ? "€" : "$";
+  return `${prefix}${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 }
 
 export default function CustomersScreen() {
@@ -112,7 +119,7 @@ export default function CustomersScreen() {
       </View>
       <View style={[styles.customerStats, { borderColor: `${colors.border}88` }]}>
         <View><Text style={[styles.statLabel, { color: colors.muted }]}>Orders</Text><SensitiveValue revealed={isRevealed} style={[styles.statValue, { color: colors.foreground }]}>{item.totalOrders.toLocaleString("en-US")}</SensitiveValue></View>
-        <View><Text style={[styles.statLabel, { color: colors.muted }]}>Lifetime value</Text><SensitiveValue revealed={isRevealed} style={[styles.statValue, { color: colors.primary }]}>${Number(item.lifetimeValue || 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}</SensitiveValue></View>
+        <View><Text style={[styles.statLabel, { color: colors.muted }]}>Lifetime value</Text><SensitiveValue revealed={isRevealed} style={[styles.statValue, { color: colors.primary }]}>{formatCustomerValue(Number(item.lifetimeValue || 0), item.currency || "USD")}</SensitiveValue></View>
         <View><Text style={[styles.statLabel, { color: colors.muted }]}>Last order</Text><SensitiveValue revealed={isRevealed} style={[styles.statValueSmall, { color: colors.foreground }]}>{item.lastOrderDate ? new Date(item.lastOrderDate).toLocaleDateString() : "—"}</SensitiveValue></View>
       </View>
       <View style={[styles.actions, customerActionStyle]}><LuxuryButton label="WhatsApp" onPress={() => void contact("whatsapp", item)} variant="ghost" disabled={!isRevealed} style={styles.action} /><LuxuryButton label="Call" onPress={() => void contact("call", item)} variant="secondary" disabled={!isRevealed} style={styles.action} /><LuxuryButton label="Email" onPress={() => void contact("email", item)} variant="secondary" disabled={!isRevealed} style={styles.action} /></View>
