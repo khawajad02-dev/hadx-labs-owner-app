@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
 import { LuxuryButton, LuxuryCard, MiniSparkline, SectionHeading, StatusPill } from "@/components/luxury-ui";
@@ -38,6 +39,7 @@ function formatCurrency(value: number | undefined, currency = "USD") {
 
 export default function AnalyticsScreen() {
   const colors = useColors();
+  const router = useRouter();
   const isBento = colors.themeId === "bento-telemetry";
   const isSpatial = colors.themeId === "visionos-spatial";
   const isTerminal = colors.themeId === "cyberpunk-terminal";
@@ -58,13 +60,17 @@ export default function AnalyticsScreen() {
       setAnalytics(response.data);
     } catch (requestError: any) {
       console.error("Error fetching analytics:", requestError);
+      if (requestError?.response?.status === 401) {
+        router.replace("/security-vault");
+        return;
+      }
       setAnalytics(null);
       setError(requestError?.response?.data?.error || "Analytics are temporarily unavailable.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     void fetchAnalytics();

@@ -118,6 +118,10 @@ export default function OrdersScreen() {
       setHasMore(parsed.hasMore);
     } catch (requestError: any) {
       console.error("Error fetching orders:", requestError);
+      if (requestError?.response?.status === 401) {
+        router.replace("/security-vault");
+        return;
+      }
       setError(requestError?.response?.data?.error || "The order queue could not be loaded.");
       if (!append) setOrders([]);
     } finally {

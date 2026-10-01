@@ -69,6 +69,10 @@ export default function CustomersScreen() {
       setCustomers(Array.isArray(payload) ? payload : payload?.items || []);
     } catch (requestError: any) {
       console.error("Error fetching customers:", requestError);
+      if (requestError?.response?.status === 401) {
+        router.replace("/security-vault");
+        return;
+      }
       setError(requestError?.response?.data?.error || "The client ledger could not be loaded.");
       setCustomers([]);
     } finally {

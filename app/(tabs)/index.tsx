@@ -26,6 +26,7 @@ import { apiGet } from "@/lib/api-client";
 interface DashboardMetrics {
   revenueToday: number;
   revenueCurrency?: string;
+  regionSales?: { PKR?: number; INR?: number; USD?: number };
   activeUsers: number;
   serverStatus: string;
   databaseHealth: string;
@@ -134,24 +135,16 @@ export default function DashboardScreen() {
           </LuxuryCard>
         ) : null}
 
-        <LuxuryCard accent style={styles.heroCard}>
-          <SectionHeading
-            eyebrow="TODAY / PERFORMANCE"
-            title={metrics ? (isRevealed ? formatCurrency(metrics.revenueToday, metrics.revenueCurrency) : "••••••") : "—"}
-            detail="Revenue captured today"
-          />
-          <View style={styles.heroLowerRow}>
-            <View style={styles.heroMeta}>
-              <Text style={[styles.metricLabel, { color: colors.muted }]}>Active customers</Text>
-              <SensitiveValue revealed={isRevealed} style={[styles.metricValue, { color: colors.foreground }]}>
-                {typeof metrics?.activeUsers === "number" ? metrics.activeUsers.toLocaleString("en-US") : "—"}
-              </SensitiveValue>
-            </View>
-            <View style={styles.sparklineWrap}>
-              <MiniSparkline values={isRevealed && metrics ? [18, 24, 20, 31, 28, 38, 44] : [24, 24, 24, 24, 24, 24, 24]} color={isRevealed ? colors.accent : `${colors.muted}88`} />
-            </View>
-          </View>
-        </LuxuryCard>
+        <SectionHeading eyebrow="TODAY / REGIONAL SALES" title="Exact sales by market" detail="No averaging across currencies" />
+        <View style={styles.regionGrid}>
+          {([ ["Pakistan Sales", "PKR"], ["India Sales", "INR"], ["Foreign / International Sales", "USD"] ] as const).map(([label, currency]) => (
+            <LuxuryCard compact key={currency} style={styles.regionCard}>
+              <Text style={[styles.metricLabel, { color: colors.muted }]}>{label}</Text>
+              <SensitiveValue revealed={isRevealed} style={[styles.regionValue, { color: colors.primary }]}>{formatCurrency(metrics?.regionSales?.[currency] || 0, currency)}</SensitiveValue>
+              <Text style={[styles.metricHint, { color: colors.muted }]}>Today · {currency}</Text>
+            </LuxuryCard>
+          ))}
+        </View>
 
         {isTerminal ? <LuxuryCard compact style={styles.eventCard}><Text style={[styles.eventEyebrow, { color: colors.primary }]}>LIVE EVENT STREAM</Text><Text style={[styles.eventLine, { color: colors.foreground }]}>› auth/session verified</Text><Text style={[styles.eventLine, { color: colors.muted }]}>› storefront route operational</Text><Text style={[styles.eventLine, { color: colors.muted }]}>› order queue ready</Text></LuxuryCard> : null}
         {isSpatial ? <LuxuryCard accent style={styles.spatialCard}><Text style={[styles.metricLabel, { color: colors.primary }]}>SPATIAL LAYER</Text><Text style={[styles.spatialTitle, { color: colors.foreground }]}>Your atelier, in focus.</Text><Text style={[styles.spatialDetail, { color: colors.muted }]}>Move from signal to action with generous, calm surfaces.</Text></LuxuryCard> : null}
@@ -237,9 +230,9 @@ const styles = StyleSheet.create({
   alertTitle: { fontSize: 15, fontWeight: "800" },
   alertText: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
   retryButton: { alignSelf: "flex-start" },
-  heroCard: { minHeight: 188 },
-  heroLowerRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 18, marginTop: 24 },
-  heroMeta: { gap: 4 },
+  regionGrid: { gap: 10 },
+  regionCard: { minHeight: 92 },
+  regionValue: { fontSize: 23, fontWeight: "900", marginTop: 10 },
   metricLabel: { fontSize: 12, fontWeight: "700", letterSpacing: 0.4 },
   metricValue: { fontSize: 24, fontWeight: "900" },
   sparklineWrap: { flex: 1, maxWidth: 170, height: 38 },
