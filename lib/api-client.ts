@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from "axios";
 import * as SecureStore from "expo-secure-store";
 
-import { OWNER_ADMIN_BASE_URL, OWNER_SESSION_KEY } from "@/constants/owner-api";
+import { LEGACY_OWNER_SESSION_KEY, OWNER_ADMIN_BASE_URL, OWNER_SESSION_KEY } from "@/constants/owner-api";
 
 let apiClient: AxiosInstance | null = null;
 
@@ -10,7 +10,8 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
     return apiClient;
   }
 
-  const sessionToken = await SecureStore.getItemAsync(OWNER_SESSION_KEY);
+  const sessionToken = (await SecureStore.getItemAsync(OWNER_SESSION_KEY)) || (await SecureStore.getItemAsync(LEGACY_OWNER_SESSION_KEY));
+  if (sessionToken) await SecureStore.setItemAsync(OWNER_SESSION_KEY, sessionToken);
 
   apiClient = axios.create({
     baseURL: OWNER_ADMIN_BASE_URL,
@@ -39,6 +40,7 @@ export const createApiClient = async (): Promise<AxiosInstance> => {
       console.error("Owner API error:", error.response?.status, error.response?.data);
       if (error.response?.status === 401) {
         await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
+        await SecureStore.deleteItemAsync(LEGACY_OWNER_SESSION_KEY);
       }
       return Promise.reject(error);
     },

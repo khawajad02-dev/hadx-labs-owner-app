@@ -14,7 +14,7 @@ import { initHadxRuntime, subscribeSafeAreaInsets } from "@/lib/_core/hadx-runti
 import * as SecureStore from "expo-secure-store";
 import * as SplashScreen from "expo-splash-screen";
 import { ThemeProvider } from "@/lib/theme-provider";
-import { OWNER_SESSION_KEY } from "@/constants/owner-api";
+import { LEGACY_OWNER_SESSION_KEY, OWNER_SESSION_KEY } from "@/constants/owner-api";
 import { LuxuryScene } from "@/components/luxury-ui";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -44,7 +44,14 @@ export default function RootLayout() {
     const checkOwnerSession = async () => {
       try {
         const key = await Promise.race([
-          SecureStore.getItemAsync(OWNER_SESSION_KEY),
+          Promise.all([
+            SecureStore.getItemAsync(OWNER_SESSION_KEY),
+            SecureStore.getItemAsync(LEGACY_OWNER_SESSION_KEY),
+          ]).then(async ([ownerKey, legacyKey]) => {
+            const resolvedKey = ownerKey || legacyKey;
+            if (!ownerKey && legacyKey) await SecureStore.setItemAsync(OWNER_SESSION_KEY, legacyKey);
+            return resolvedKey;
+          }),
           new Promise<string | null>((resolve) => setTimeout(() => resolve(null), 4000)),
         ]);
         if (!active) return;
