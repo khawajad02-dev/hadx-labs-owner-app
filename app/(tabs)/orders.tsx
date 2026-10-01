@@ -136,6 +136,13 @@ export default function OrdersScreen() {
     return () => clearTimeout(timer);
   }, [fetchOrders]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!loadingMore && !refreshing) void fetchOrders(false);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [fetchOrders, loadingMore, refreshing]);
+
   const onRefresh = () => {
     setRefreshing(true);
     void fetchOrders(false);

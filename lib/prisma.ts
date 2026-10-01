@@ -1,11 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: ["query"],
-  });
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// The owner app talks to the storefront admin API through lib/api-client.ts.
+// Keep this compatibility export for older imports without requiring a generated
+// server-side Prisma client in the Expo bundle.
+export const prisma = null;
