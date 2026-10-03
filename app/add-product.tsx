@@ -29,6 +29,12 @@ function makeSku(title: string) {
   return `HADX-${slug}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }
 
+function parsePriceInput(value: string) {
+  const normalized = value.replace(/,/g, "").replace(/[^0-9.-]/g, "");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 type ProductInputFieldProps = {
   label: string;
   value: string;
@@ -110,9 +116,9 @@ export default function AddProductScreen() {
   const removeColorMedia = (variantIndex: number, mediaId: string) => setColorVariants((all) => all.map((variant, index) => index === variantIndex ? { ...variant, colorMedia: variant.colorMedia.filter((item) => item.id !== mediaId) } : variant));
 
   const handleSave = async (status: "DRAFT" | "PUBLISHED") => {
-    const usd = Number(form.usdPrice);
-    const pkr = Number(form.pkrPrice);
-    const inr = Number(form.inrPrice);
+    const usd = parsePriceInput(form.usdPrice);
+    const pkr = parsePriceInput(form.pkrPrice);
+    const inr = parsePriceInput(form.inrPrice);
     const sizeStock = Object.fromEntries(selectedSizes.map((size) => [size, Math.max(0, Number(stockBySize[size]) || 0)]));
     const stock = Object.values(sizeStock).reduce((total, value) => total + value, 0);
     if (!form.title.trim() || !form.sku.trim() || !Number.isFinite(usd) || usd <= 0 || !Number.isFinite(pkr) || pkr <= 0 || !Number.isFinite(inr) || inr <= 0) {

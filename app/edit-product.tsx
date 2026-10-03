@@ -12,6 +12,12 @@ import { PRODUCT_SIZES } from "@/constants/product-sizes";
 
 type EditableMedia = (PickedMedia & { id: string; url?: string }) | { id: string; url: string; type: "image" | "video"; fileName?: string };
 
+function parsePriceInput(value: string) {
+  const normalized = value.replace(/,/g, "").replace(/[^0-9.-]/g, "");
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export default function EditProductScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -79,9 +85,9 @@ export default function EditProductScreen() {
   const removeColorMedia = (variantIndex: number, mediaId: string) => setColorVariants((all) => all.map((variant, index) => index === variantIndex ? { ...variant, colorMedia: variant.colorMedia.filter((item) => item.id !== mediaId) } : variant));
 
   const save = async (statusOverride?: "DRAFT" | "PUBLISHED") => {
-    const usd = Number(form.usdPrice);
-    const pkr = Number(form.pkrPrice);
-    const inr = Number(form.inrPrice);
+    const usd = parsePriceInput(form.usdPrice);
+    const pkr = parsePriceInput(form.pkrPrice);
+    const inr = parsePriceInput(form.inrPrice);
     const sizeStock = Object.fromEntries(selectedSizes.map((size) => [size, Math.max(0, Number(stockBySize[size]) || 0)]));
     const sizeMeasurements = Object.fromEntries(selectedSizes.map((size) => [size, { chest: Number(measurementsBySize[size]?.chest) || 0, length: Number(measurementsBySize[size]?.length) || 0, shoulder: Number(measurementsBySize[size]?.shoulder) || 0 }]));
     const stockQuantity = Object.values(sizeStock).reduce((total, value) => total + value, 0);
