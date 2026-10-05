@@ -20,6 +20,7 @@ const MAPPING = {
   "chevron.right": "chevron-right",
   "square.grid.2x2": "dashboard",
   "cube.box": "inventory-2",
+  "tag": "local-offer",
   "list.bullet.rectangle": "receipt-long",
   "person.2": "people",
   "chart.bar": "bar-chart",

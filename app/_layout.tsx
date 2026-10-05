@@ -120,6 +120,7 @@ export default function RootLayout() {
             <Stack.Screen name="security-vault" />
             <Stack.Screen name="add-product" options={{ presentation: "modal" }} />
             <Stack.Screen name="edit-product" options={{ presentation: "modal" }} />
+            <Stack.Screen name="drop-editor" options={{ presentation: "modal" }} />
           </Stack>
           <StatusBar style="light" />
         </QueryClientProvider>

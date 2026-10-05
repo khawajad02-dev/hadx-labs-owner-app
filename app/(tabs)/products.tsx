@@ -34,6 +34,7 @@ interface Product {
   status: "DRAFT" | "PUBLISHED" | string;
   stockQuantity: number;
   createdAt?: string;
+  drop?: { id: string; title: string; slug: string } | null;
 }
 
 interface ProductResponse {
@@ -170,6 +171,7 @@ export default function ProductsScreen() {
             {isRevealed ? <StatusPill label={item.status === "PUBLISHED" ? "Live" : "Draft"} tone={item.status === "PUBLISHED" ? "success" : "warning"} /> : <SensitiveValue revealed={false} style={[styles.productSku, { color: colors.muted }]}>Private status</SensitiveValue>}
           </View>
           <SensitiveValue revealed={isRevealed} style={[styles.productSku, { color: colors.muted }]}>{item.sku} · {item.category || "Uncategorised"}</SensitiveValue>
+          {item.drop ? <SensitiveValue revealed={isRevealed} style={[styles.productSku, { color: colors.primary }]}>In drop: {item.drop.title}</SensitiveValue> : null}
           <SensitiveValue revealed={isRevealed} style={[styles.productPrice, { color: colors.primary }]}>{formatPrice(item)}</SensitiveValue>
           <SensitiveValue revealed={isRevealed} style={[styles.mediaCount, { color: colors.muted }]}>{item.media?.length || (item.imageUrl ? 1 : 0)} media asset{(item.media?.length || (item.imageUrl ? 1 : 0)) === 1 ? "" : "s"}</SensitiveValue>
         </View>

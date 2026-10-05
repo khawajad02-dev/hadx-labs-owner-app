@@ -174,9 +174,8 @@ export default function OrdersScreen() {
     Linking.openURL(url).catch(() => Alert.alert("Could not open WhatsApp", "Please check that WhatsApp is installed."));
   };
 
-  const deleteCancelledTestOrder = (order: Order) => {
-    if (order.orderStatus !== "CANCELLED" && order.orderStatus !== "EXPIRED") return;
-    Alert.alert("Delete cancelled test order?", `Remove ${order.orderReference} from the order queue? This cannot be undone.`, [
+  const deleteOrder = (order: Order) => {
+    Alert.alert("Delete order permanently?", `Remove ${order.orderReference} from the database? This cannot be undone.`, [
       { text: "Keep", style: "cancel" },
       {
         text: "Delete",
@@ -245,7 +244,7 @@ export default function OrdersScreen() {
         {item.orderStatus === "CONFIRMED" ? <LuxuryButton label="✓ Delivered" onPress={() => void updateOrderStatus(item.id, "DELIVERED")} variant="primary" style={styles.actionButton} /> : null}
         {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item.id, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
         <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" disabled={!isRevealed} style={styles.actionButton} />
-        {item.orderStatus === "CANCELLED" || item.orderStatus === "EXPIRED" ? <LuxuryButton label="Delete test" onPress={() => deleteCancelledTestOrder(item)} variant="danger" style={styles.actionButton} /> : null}
+        <LuxuryButton label="Delete order" onPress={() => deleteOrder(item)} variant="danger" style={styles.actionButton} />
       </View>
     </LuxuryCard>
   );
@@ -275,7 +274,7 @@ export default function OrdersScreen() {
               style={[styles.searchInput, { backgroundColor: colors.surface, color: colors.foreground, borderColor: colors.border }]}
             />
             <LuxuryButton label="Refresh order queue" onPress={() => { setRefreshing(true); void fetchOrders(false); }} variant="ghost" style={styles.refreshButton} />
-            <LuxuryButton label="Order history" onPress={() => router.push("/order-history")} variant="secondary" style={styles.refreshButton} />
+            <LuxuryButton label="◷ Orders history" onPress={() => router.push("/order-history")} variant="secondary" style={styles.refreshButton} />
             <View style={[styles.filterRow, themeFilterStyle]}>
               {FILTERS.map((item) => (
                 <LuxuryButton
