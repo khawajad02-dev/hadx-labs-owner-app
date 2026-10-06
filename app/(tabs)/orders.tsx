@@ -17,7 +17,8 @@ import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/componen
 import { useColors } from "@/hooks/use-colors";
 import { SensitiveValue } from "@/components/privacy-ui";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
-import { apiDelete, apiGet, apiPut } from "@/lib/api-client";
+import { apiDelete, apiGet, apiPatch, apiPut } from "@/lib/api-client";
+import { filterActiveOrders, isLegacyDeliveredDeleteRestriction, shouldFallbackLegacyDelete } from "@/lib/order-actions";
 
 interface Order {
   id: string;
@@ -112,8 +113,9 @@ export default function OrdersScreen() {
       if (cursor) params.set("cursor", cursor);
       const response = await apiGet(`/orders?${params.toString()}`);
       const parsed = normalizeResponse(response.data);
-      setOrders((previous) => (append ? [...previous, ...parsed.items] : parsed.items));
-      setTotal(parsed.total);
+      const activeItems = filterActiveOrders(parsed.items);
+      setOrders((previous) => (append ? [...previous, ...activeItems] : activeItems));
+      setTotal(Math.max(0, parsed.total - (parsed.items.length - activeItems.length)));
       setNextCursor(parsed.nextCursor || null);
       setHasMore(parsed.hasMore);
     } catch (requestError: any) {
@@ -149,17 +151,32 @@ export default function OrdersScreen() {
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
-    const previous = orders;
-    setOrders((current) => newStatus === "DELIVERED"
-      ? current.filter((order) => order.id !== orderId)
-      : current.map((order) => (order.id === orderId ? { ...order, orderStatus: newStatus } : order)));
-    if (newStatus === "DELIVERED") setTotal((current) => Math.max(current - 1, 0));
     try {
       await apiPut(`/orders/${orderId}`, { orderStatus: newStatus });
     } catch (requestError: any) {
-      setOrders(previous);
-      if (newStatus === "DELIVERED") setTotal((current) => current + 1);
-      Alert.alert("Could not update order", requestError?.response?.data?.error || "Try again when the connection is restored.");
+      const statusCode = requestError?.response?.status;
+      if (newStatus !== "DELIVERED" || ![404, 405, 500].includes(statusCode)) {
+        Alert.alert("Could not update order", requestError?.response?.data?.error || "Try again when the connection is restored.");
+        return;
+      }
+      try {
+        await apiPatch("/orders", { id: orderId, orderStatus: newStatus });
+      } catch (fallbackError: any) {
+        const detail = fallbackError?.response?.data?.error || requestError?.response?.data?.error || "The order API rejected the update.";
+        Alert.alert(
+          "Could not update order",
+          `${detail}\n\nThe production API/database must support the DELIVERED status. An APK update cannot apply that server migration.`,
+        );
+        return;
+      }
+    }
+
+    if (newStatus === "DELIVERED") {
+      setOrders((current) => current.filter((order) => order.id !== orderId));
+      setTotal((current) => Math.max(current - 1, 0));
+      Alert.alert("Order delivered", "The order has been saved and moved to Orders History.");
+    } else {
+      setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, orderStatus: newStatus } : order)));
     }
   };
 
@@ -181,16 +198,36 @@ export default function OrdersScreen() {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          const previous = orders;
-          setOrders((current) => current.filter((entry) => entry.id !== order.id));
-          setTotal((current) => Math.max(current - 1, 0));
           try {
             await apiDelete(`/orders/${order.id}`);
           } catch (requestError: any) {
-            setOrders(previous);
-            setTotal((current) => current + 1);
-            Alert.alert("Could not delete order", requestError?.response?.data?.error || "Try again when the connection is restored.");
+            const serverMessage = String(requestError?.response?.data?.error || "");
+            if (isLegacyDeliveredDeleteRestriction(order.orderStatus, requestError?.response?.status, serverMessage)) {
+              Alert.alert(
+                "Could not delete delivered order",
+                "The production API still has the old delete restriction. I did not cancel this delivered order because that could incorrectly return sold stock to inventory. Deploy the HADX-LABS order API fix first.",
+              );
+              return;
+            }
+
+            if (!shouldFallbackLegacyDelete(order.orderStatus, requestError?.response?.status, serverMessage)) {
+              Alert.alert("Could not delete order", serverMessage || "Try again when the connection is restored.");
+              return;
+            }
+
+            try {
+              await apiPut(`/orders/${order.id}`, { orderStatus: "CANCELLED" });
+              await apiDelete(`/orders/${order.id}`);
+            } catch (fallbackError: any) {
+              const detail = fallbackError?.response?.data?.error || "The order was not permanently deleted.";
+              Alert.alert("Could not delete order", `The legacy server rejected the delete. The order may now be cancelled; refresh and retry.\n\n${detail}`);
+              return;
+            }
           }
+
+          setOrders((current) => current.filter((entry) => entry.id !== order.id));
+          setTotal((current) => Math.max(current - 1, 0));
+          Alert.alert("Order deleted", `${order.orderReference} was removed from the database.`);
         },
       },
     ]);

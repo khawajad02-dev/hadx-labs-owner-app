@@ -8,6 +8,7 @@ import { SensitiveValue } from "@/components/privacy-ui";
 import { useColors } from "@/hooks/use-colors";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { apiGet } from "@/lib/api-client";
+import { filterDeliveredHistory } from "@/lib/order-actions";
 
 type HistoryOrder = { id: string; orderReference: string; fullName: string; productTitle: string; productColor?: string | null; size?: string | null; quantity: number; orderStatus: string; createdAt: string; updatedAt: string };
 
@@ -32,7 +33,7 @@ export default function OrderHistoryScreen() {
       setError("");
       const response = await apiGet("/orders?status=HISTORY&pageSize=100");
       const data = Array.isArray(response.data) ? response.data : response.data?.items;
-      setOrders(Array.isArray(data) ? data : []);
+      setOrders(Array.isArray(data) ? filterDeliveredHistory(data) : []);
     } catch (requestError: any) {
       console.error("Order history error:", requestError);
       setError(requestError?.response?.data?.error || "Order history could not be loaded.");
