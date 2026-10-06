@@ -33,6 +33,11 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Firebase push configuration/credentials (kept local for the native build)
+google-services.json
+firebase-service-account*.json
+*-firebase-adminsdk*.json
+
 # typescript
 *.tsbuildinfo
 

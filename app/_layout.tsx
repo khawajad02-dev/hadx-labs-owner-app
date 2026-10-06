@@ -16,6 +16,8 @@ import * as SplashScreen from "expo-splash-screen";
 import { ThemeProvider } from "@/lib/theme-provider";
 import { LEGACY_OWNER_SESSION_KEY, OWNER_SESSION_KEY } from "@/constants/owner-api";
 import { LuxuryScene } from "@/components/luxury-ui";
+import { HadxAlertProvider } from "@/components/HadxAlert";
+import { addOwnerNotificationResponseListener, registerOwnerPushToken } from "@/lib/register-push";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -38,6 +40,11 @@ export default function RootLayout() {
     initHadxRuntime();
   }, []);
 
+  useEffect(() => {
+    const subscription = addOwnerNotificationResponseListener(() => router.push("/(tabs)/orders"));
+    return () => subscription.remove();
+  }, [router]);
+
   // Resolve secure storage, but never leave the native splash waiting forever.
   useEffect(() => {
     let active = true;
@@ -56,6 +63,9 @@ export default function RootLayout() {
         ]);
         if (!active) return;
         router.replace(key ? "/(tabs)" : "/security-vault");
+        if (key) {
+          void registerOwnerPushToken().catch((pushError) => console.warn("Owner push registration did not complete:", pushError instanceof Error ? pushError.message : "unknown error"));
+        }
       } catch (error) {
         console.error("Error checking owner session:", error);
         if (active) {
@@ -136,18 +146,22 @@ export default function RootLayout() {
   if (shouldOverrideSafeArea) {
     return (
       <ThemeProvider>
-        <SafeAreaProvider initialMetrics={providerInitialMetrics}>
-          <SafeAreaFrameContext.Provider value={frame}>
-            <SafeAreaInsetsContext.Provider value={insets}>{content}</SafeAreaInsetsContext.Provider>
-          </SafeAreaFrameContext.Provider>
-        </SafeAreaProvider>
+        <HadxAlertProvider>
+          <SafeAreaProvider initialMetrics={providerInitialMetrics}>
+            <SafeAreaFrameContext.Provider value={frame}>
+              <SafeAreaInsetsContext.Provider value={insets}>{content}</SafeAreaInsetsContext.Provider>
+            </SafeAreaFrameContext.Provider>
+          </SafeAreaProvider>
+        </HadxAlertProvider>
       </ThemeProvider>
     );
   }
 
   return (
     <ThemeProvider>
-      <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
+      <HadxAlertProvider>
+        <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
+      </HadxAlertProvider>
     </ThemeProvider>
   );
 }

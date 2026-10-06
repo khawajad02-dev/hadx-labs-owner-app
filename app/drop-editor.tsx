@@ -1,7 +1,8 @@
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import { hadxAlert } from "@/components/HadxAlert";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 
 import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/components/luxury-ui";
 import { ScreenContainer } from "@/components/screen-container";
@@ -100,12 +101,12 @@ export default function DropEditorScreen() {
 
   const save = async () => {
     const validationError = validateDrop({ title, startsAt, endsAt });
-    if (validationError) { Alert.alert("Check Drop details", validationError); return; }
+    if (validationError) { hadxAlert("Check Drop details", validationError); return; }
     setSaving(true); setError("");
     const payload = { title: title.trim(), tagline: tagline.trim(), startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString(), isActive, sellAfterEnd, productIds: selected.map((product) => product.id) };
     try {
       if (id && !isRun) await apiPut(`/drops/${id}`, payload); else await apiPost("/drops", payload);
-      Alert.alert(isRun ? "Drop re-run created" : id ? "Drop updated" : "Drop created", "The release and product order have been saved.", [{ text: "Done", onPress: () => router.back() }]);
+      hadxAlert(isRun ? "Drop re-run created" : id ? "Drop updated" : "Drop created", "The release and product order have been saved.", [{ text: "Done", onPress: () => router.back() }]);
     } catch (requestError: any) {
       setError(requestError?.response?.data?.error || "Drop could not be saved.");
     } finally { setSaving(false); }

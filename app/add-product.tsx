@@ -1,7 +1,7 @@
 import * as ImagePicker from "expo-image-picker";
+import { hadxAlert } from "@/components/HadxAlert";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -87,7 +87,7 @@ export default function AddProductScreen() {
   const pickMedia = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Gallery access needed", "Allow gallery access so you can select product images and videos.");
+      hadxAlert("Gallery access needed", "Allow gallery access so you can select product images and videos.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -107,7 +107,7 @@ export default function AddProductScreen() {
   };
   const pickColorMedia = async (index: number) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) { Alert.alert("Gallery access needed", "Allow gallery access to choose color photos and videos."); return; }
+    if (!permission.granted) { hadxAlert("Gallery access needed", "Allow gallery access to choose color photos and videos."); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], allowsMultipleSelection: true, quality: 1 });
     if (result.canceled || !result.assets?.length) return;
     const additions = result.assets.map((asset, assetIndex) => ({ id: `${asset.assetId || asset.uri}-${Date.now()}-${assetIndex}`, uri: asset.uri, type: asset.type === "video" ? "video" as const : "image" as const, mimeType: asset.mimeType, fileName: asset.fileName }));
@@ -123,15 +123,15 @@ export default function AddProductScreen() {
     const sizeStock = Object.fromEntries(selectedSizes.map((size) => [size, Math.max(0, Number(stockBySize[size]) || 0)]));
     const stock = Object.values(sizeStock).reduce((total, value) => total + value, 0);
     if (!form.title.trim() || !form.sku.trim() || !Number.isFinite(usd) || usd <= 0 || !Number.isFinite(pkr) || pkr <= 0 || !Number.isFinite(inr) || inr <= 0) {
-      Alert.alert("Complete the price board", "Title, SKU and all three regional prices (USD, PKR and INR) are required.");
+      hadxAlert("Complete the price board", "Title, SKU and all three regional prices (USD, PKR and INR) are required.");
       return;
     }
     if (!Number.isFinite(stock) || stock < 0) {
-      Alert.alert("Check stock quantity", "Stock must be zero or a positive number.");
+      hadxAlert("Check stock quantity", "Stock must be zero or a positive number.");
       return;
     }
     if (!selectedSizes.length) {
-      Alert.alert("Choose available sizes", "Select at least one size for this product.");
+      hadxAlert("Choose available sizes", "Select at least one size for this product.");
       return;
     }
 
@@ -175,10 +175,10 @@ export default function AddProductScreen() {
         drop, colorVariants: savedColorVariants,
       });
 
-      Alert.alert("Piece secured", status === "PUBLISHED" ? "The product is now live in your atelier." : "The product was saved as a draft.", [{ text: "Done", onPress: () => router.back() }]);
+      hadxAlert("Piece secured", status === "PUBLISHED" ? "The product is now live in your atelier." : "The product was saved as a draft.", [{ text: "Done", onPress: () => router.back() }]);
     } catch (error: any) {
       console.error("Save product error:", error);
-      Alert.alert("Could not save product", error?.response?.data?.error || error?.message || "Please try again.");
+      hadxAlert("Could not save product", error?.response?.data?.error || error?.message || "Please try again.");
     } finally {
       setLoading(false);
       setUploadProgress("");

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
+import { hadxAlert } from "@/components/HadxAlert";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Linking,
   RefreshControl,
@@ -17,8 +17,8 @@ import { LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "@/componen
 import { useColors } from "@/hooks/use-colors";
 import { SensitiveValue } from "@/components/privacy-ui";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
-import { apiDelete, apiGet, apiPatch, apiPut } from "@/lib/api-client";
-import { filterActiveOrders, isLegacyDeliveredDeleteRestriction, shouldFallbackLegacyDelete } from "@/lib/order-actions";
+import { apiGet, apiPatch, apiPut } from "@/lib/api-client";
+import { filterActiveOrders, filterArchivedOrders } from "@/lib/order-actions";
 
 interface Order {
   id: string;
@@ -37,6 +37,7 @@ interface Order {
   currency?: string;
   paymentStatus: string;
   orderStatus: string;
+  archivedAt?: string | null;
   createdAt: string;
   product?: { id: string; title: string; imageUrl?: string | null; sku?: string } | null;
 }
@@ -51,7 +52,7 @@ interface OrderResponse {
 }
 
 const PAGE_SIZE = 25;
-const FILTERS = ["ALL", "RESERVED", "CONFIRMED", "CANCELLED"] as const;
+const FILTERS = ["ALL", "RESERVED", "CONFIRMED", "CANCELLED", "ARCHIVED"] as const;
 type OrderFilter = (typeof FILTERS)[number];
 
 function normalizeResponse(data: OrderResponse | Order[]): OrderResponse {
@@ -113,9 +114,9 @@ export default function OrdersScreen() {
       if (cursor) params.set("cursor", cursor);
       const response = await apiGet(`/orders?${params.toString()}`);
       const parsed = normalizeResponse(response.data);
-      const activeItems = filterActiveOrders(parsed.items);
-      setOrders((previous) => (append ? [...previous, ...activeItems] : activeItems));
-      setTotal(Math.max(0, parsed.total - (parsed.items.length - activeItems.length)));
+      const visibleItems = filter === "ARCHIVED" ? filterArchivedOrders(parsed.items) : filterActiveOrders(parsed.items);
+      setOrders((previous) => (append ? [...previous, ...visibleItems] : visibleItems));
+      setTotal(filter === "ARCHIVED" ? visibleItems.length : Math.max(0, parsed.total - (parsed.items.length - visibleItems.length)));
       setNextCursor(parsed.nextCursor || null);
       setHasMore(parsed.hasMore);
     } catch (requestError: any) {
@@ -156,17 +157,13 @@ export default function OrdersScreen() {
     } catch (requestError: any) {
       const statusCode = requestError?.response?.status;
       if (newStatus !== "DELIVERED" || ![404, 405, 500].includes(statusCode)) {
-        Alert.alert("Could not update order", requestError?.response?.data?.error || "Try again when the connection is restored.");
+        hadxAlert("Could not update order", "Please refresh the order queue and try again.");
         return;
       }
       try {
         await apiPatch("/orders", { id: orderId, orderStatus: newStatus });
       } catch (fallbackError: any) {
-        const detail = fallbackError?.response?.data?.error || requestError?.response?.data?.error || "The order API rejected the update.";
-        Alert.alert(
-          "Could not update order",
-          `${detail}\n\nThe production API/database must support the DELIVERED status. An APK update cannot apply that server migration.`,
-        );
+        hadxAlert("Could not update order", "The order could not be moved to Delivered. Please refresh and try again.");
         return;
       }
     }
@@ -174,7 +171,7 @@ export default function OrdersScreen() {
     if (newStatus === "DELIVERED") {
       setOrders((current) => current.filter((order) => order.id !== orderId));
       setTotal((current) => Math.max(current - 1, 0));
-      Alert.alert("Order delivered", "The order has been saved and moved to Orders History.");
+      hadxAlert("Order delivered", "The order has been saved and moved to Orders History.");
     } else {
       setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, orderStatus: newStatus } : order)));
     }
@@ -182,54 +179,32 @@ export default function OrdersScreen() {
 
   const contactWhatsApp = (order: Order) => {
     if (!order.phone) {
-      Alert.alert("No phone number", "This order has no customer phone number.");
+      hadxAlert("No phone number", "This order has no customer phone number.");
       return;
     }
     const destination = [order.city, order.country].filter(Boolean).join(", ") || order.address;
     const message = `Congratulations ${order.fullName}! Your HADX LABS parcel ${order.orderReference} has been received. ${order.productTitle}${order.productColor ? ` (${order.productColor}` : order.size ? " (" : ""}${order.size ? `${order.productColor ? ", " : ""}size ${order.size}` : ""}${order.productColor || order.size ? ")" : ""} is being prepared for delivery within 5–7 working days. Delivery destination: ${destination}. We will contact you if anything else is needed.`;
     const url = `https://wa.me/${order.phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
-    Linking.openURL(url).catch(() => Alert.alert("Could not open WhatsApp", "Please check that WhatsApp is installed."));
+    Linking.openURL(url).catch(() => hadxAlert("Could not open WhatsApp", "Please check that WhatsApp is installed."));
   };
 
-  const deleteOrder = (order: Order) => {
-    Alert.alert("Delete order permanently?", `Remove ${order.orderReference} from the database? This cannot be undone.`, [
-      { text: "Keep", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await apiDelete(`/orders/${order.id}`);
-          } catch (requestError: any) {
-            const serverMessage = String(requestError?.response?.data?.error || "");
-            if (isLegacyDeliveredDeleteRestriction(order.orderStatus, requestError?.response?.status, serverMessage)) {
-              Alert.alert(
-                "Could not delete delivered order",
-                "The production API still has the old delete restriction. I did not cancel this delivered order because that could incorrectly return sold stock to inventory. Deploy the HADX-LABS order API fix first.",
-              );
-              return;
-            }
+  const setOrderArchived = async (order: Order, archived: boolean) => {
+    try {
+      await apiPatch(`/orders/${order.id}`, { archived });
+      setOrders((current) => current.filter((entry) => entry.id !== order.id));
+      setTotal((current) => Math.max(current - 1, 0));
+      hadxAlert(archived ? "Order archived" : "Order restored", archived
+        ? "The order is safely retained in Archived and can be restored later."
+        : "The order has been returned to the active queue.");
+    } catch (requestError: any) {
+      hadxAlert(archived ? "Could not archive order" : "Could not restore order", requestError?.response?.data?.error || "Please refresh the order queue and try again.");
+    }
+  };
 
-            if (!shouldFallbackLegacyDelete(order.orderStatus, requestError?.response?.status, serverMessage)) {
-              Alert.alert("Could not delete order", serverMessage || "Try again when the connection is restored.");
-              return;
-            }
-
-            try {
-              await apiPut(`/orders/${order.id}`, { orderStatus: "CANCELLED" });
-              await apiDelete(`/orders/${order.id}`);
-            } catch (fallbackError: any) {
-              const detail = fallbackError?.response?.data?.error || "The order was not permanently deleted.";
-              Alert.alert("Could not delete order", `The legacy server rejected the delete. The order may now be cancelled; refresh and retry.\n\n${detail}`);
-              return;
-            }
-          }
-
-          setOrders((current) => current.filter((entry) => entry.id !== order.id));
-          setTotal((current) => Math.max(current - 1, 0));
-          Alert.alert("Order deleted", `${order.orderReference} was removed from the database.`);
-        },
-      },
+  const archiveOrder = (order: Order) => {
+    hadxAlert("Archive this order?", `${order.orderReference} will remain in your records and can be restored later.`, [
+      { text: "Keep order", style: "cancel" },
+      { text: "Archive", style: "destructive", onPress: () => void setOrderArchived(order, true) },
     ]);
   };
 
@@ -277,11 +252,17 @@ export default function OrdersScreen() {
         </View>
       </View>
       <View style={[styles.actionRow, themeActionStyle]}>
-        {item.orderStatus === "RESERVED" ? <LuxuryButton label="Confirm" onPress={() => void updateOrderStatus(item.id, "CONFIRMED")} variant="primary" style={styles.actionButton} /> : null}
-        {item.orderStatus === "CONFIRMED" ? <LuxuryButton label="✓ Delivered" onPress={() => void updateOrderStatus(item.id, "DELIVERED")} variant="primary" style={styles.actionButton} /> : null}
-        {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item.id, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
-        <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" disabled={!isRevealed} style={styles.actionButton} />
-        <LuxuryButton label="Delete order" onPress={() => deleteOrder(item)} variant="danger" style={styles.actionButton} />
+        {filter === "ARCHIVED" ? (
+          <LuxuryButton label="Restore" onPress={() => void setOrderArchived(item, false)} variant="secondary" style={styles.actionButton} />
+        ) : (
+          <>
+            {item.orderStatus === "RESERVED" ? <LuxuryButton label="Confirm" onPress={() => void updateOrderStatus(item.id, "CONFIRMED")} variant="primary" style={styles.actionButton} /> : null}
+            {item.orderStatus === "CONFIRMED" ? <LuxuryButton label="✓ Delivered" onPress={() => void updateOrderStatus(item.id, "DELIVERED")} variant="primary" style={styles.actionButton} /> : null}
+            {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item.id, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
+            <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" disabled={!isRevealed} style={styles.actionButton} />
+            <LuxuryButton label="Archive" onPress={() => archiveOrder(item)} variant="ghost" style={styles.actionButton} />
+          </>
+        )}
       </View>
     </LuxuryCard>
   );
@@ -301,7 +282,7 @@ export default function OrdersScreen() {
         onEndReachedThreshold={0.3}
         ListHeaderComponent={
           <View style={[styles.headerContent, themeHeaderStyle]}>
-            <SectionHeading eyebrow="OPERATIONS / ORDER QUEUE" title="Orders" detail={isRevealed ? `${total.toLocaleString("en-US")} orders across every status` : "•••• orders across every status"} />
+            <SectionHeading eyebrow="OPERATIONS / ORDER QUEUE" title="Orders" detail={isRevealed ? `${total.toLocaleString("en-US")} ${filter === "ARCHIVED" ? "archived" : "active"} orders` : "•••• orders"} />
             <TextInput
               value={query}
               onChangeText={setQuery}

@@ -7,6 +7,7 @@ import { CyberOrb, LuxuryButton, LuxuryCard, SectionHeading, StatusPill } from "
 import { ScreenContainer } from "@/components/screen-container";
 import { OWNER_AUTH_BASE_URL, OWNER_SESSION_KEY } from "@/constants/owner-api";
 import { useColors } from "@/hooks/use-colors";
+import { registerOwnerPushToken } from "@/lib/register-push";
 
 type LoginStep = "email" | "code";
 
@@ -78,6 +79,7 @@ export default function SecurityVaultScreen() {
       const body = await response.json();
       if (typeof body?.app_session_id !== "string" || !body.app_session_id) throw new Error("The server did not return a valid owner session.");
       await SecureStore.setItemAsync(OWNER_SESSION_KEY, body.app_session_id);
+      void registerOwnerPushToken().catch((pushError) => console.warn("Owner push registration did not complete:", pushError instanceof Error ? pushError.message : "unknown error"));
       router.replace("/(tabs)");
     } catch (verifyError) {
       setError(verifyError instanceof Error ? verifyError.message : "Could not verify the owner sign-in code.");

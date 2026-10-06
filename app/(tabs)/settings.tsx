@@ -1,6 +1,6 @@
 import { useState } from "react";
+import { hadxAlert } from "@/components/HadxAlert";
 import {
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -18,6 +18,7 @@ import { OWNER_SESSION_KEY } from "@/constants/owner-api";
 import { THEME_CONFIGS, useThemeStore, type ThemeType } from "@/lib/stores/theme-store";
 import { getBiometricAvailability, usePrivacyStore } from "@/lib/stores/privacy-store";
 import { Linking } from "react-native";
+import { unregisterOwnerPushToken } from "@/lib/register-push";
 
 const THEME_OPTIONS = (["hadx-cyber-luxury", "cyberpunk-terminal", "liquid-monogram"] as ThemeType[]).map((id) => ({
   id,
@@ -50,7 +51,7 @@ export default function SettingsScreen() {
       await Linking.openURL("https://hadx-labs.vercel.app");
     } catch (error) {
       console.error("Storefront open failed:", error);
-      Alert.alert("Could not open storefront", "Please try again when the connection is restored.");
+      hadxAlert("Could not open storefront", "Please try again when the connection is restored.");
     }
   };
 
@@ -59,23 +60,24 @@ export default function SettingsScreen() {
       await Linking.openURL(OWNER_APP_DOWNLOAD_URL);
     } catch (error) {
       console.error("Owner App download page open failed:", error);
-      Alert.alert("Could not open install page", "Please scan the QR code again when the connection is restored.");
+      hadxAlert("Could not open install page", "Please scan the QR code again when the connection is restored.");
     }
   };
 
   const handleResetSession = () => {
-    Alert.alert("Reset owner session", "You will need a new email sign-in code on next launch.", [
+    hadxAlert("Reset owner session", "You will need a new email sign-in code on next launch.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Reset session",
         style: "destructive",
         onPress: async () => {
           try {
+            await unregisterOwnerPushToken().catch((pushError) => console.warn("Push-token cleanup did not complete:", pushError instanceof Error ? pushError.message : "unknown error"));
             await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
             router.replace("/security-vault");
           } catch (error) {
             console.error("Reset session failed:", error);
-            Alert.alert("Could not reset session", "Please try again.");
+            hadxAlert("Could not reset session", "Please try again.");
           }
         },
       },
@@ -86,7 +88,7 @@ export default function SettingsScreen() {
     try {
       if (!biometricEnabled) {
         if (!(await getBiometricAvailability())) {
-          Alert.alert("Biometric not ready", "Enroll a fingerprint or face unlock in your phone settings first.");
+          hadxAlert("Biometric not ready", "Enroll a fingerprint or face unlock in your phone settings first.");
           return;
         }
         await setBiometricEnabled(true);
@@ -94,25 +96,25 @@ export default function SettingsScreen() {
         await setBiometricEnabled(false);
       }
     } catch (error) {
-      Alert.alert("Could not update biometric setting", error instanceof Error ? error.message : "Please try again.");
+      hadxAlert("Could not update biometric setting", error instanceof Error ? error.message : "Please try again.");
     }
   };
 
   const handleRelock = () => {
     hideSensitive();
     lock();
-    Alert.alert("Private mode enabled", "The Owner App is locked. Use your saved pattern, password, or biometric to continue.");
+    hadxAlert("Private mode enabled", "The Owner App is locked. Use your saved pattern, password, or biometric to continue.");
   };
 
   const handleAppLockToggle = () => {
     if (appLockEnabled) {
-      Alert.alert("Disable app lock?", "Your saved pattern/password will stay on this phone, but the Owner App will stop asking for it at launch. Eye reveal authentication remains active.", [
+      hadxAlert("Disable app lock?", "Your saved pattern/password will stay on this phone, but the Owner App will stop asking for it at launch. Eye reveal authentication remains active.", [
         { text: "Keep lock", style: "cancel" },
         { text: "Disable app lock", style: "destructive", onPress: () => void setAppLockEnabled(false) },
       ]);
       return;
     }
-    void setAppLockEnabled(true).catch((error) => Alert.alert("Could not enable app lock", error instanceof Error ? error.message : "Please try again."));
+    void setAppLockEnabled(true).catch((error) => hadxAlert("Could not enable app lock", error instanceof Error ? error.message : "Please try again."));
   };
 
   const handleChangePassword = () => {
@@ -120,18 +122,19 @@ export default function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert("Log out of Owner App", "Your server session will be removed from this device.", [
+    hadxAlert("Log out of Owner App", "Your server session will be removed from this device.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Log out",
         style: "destructive",
         onPress: async () => {
           try {
+            await unregisterOwnerPushToken().catch((pushError) => console.warn("Push-token cleanup did not complete:", pushError instanceof Error ? pushError.message : "unknown error"));
             await SecureStore.deleteItemAsync(OWNER_SESSION_KEY);
             router.replace("/security-vault");
           } catch (error) {
             console.error("Logout failed:", error);
-            Alert.alert("Could not log out", "Please try again.");
+            hadxAlert("Could not log out", "Please try again.");
           }
         },
       },

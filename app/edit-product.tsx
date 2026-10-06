@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { hadxAlert } from "@/components/HadxAlert";
 import * as ImagePicker from "expo-image-picker";
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { ScreenContainer } from "@/components/screen-container";
@@ -53,7 +54,7 @@ export default function EditProductScreen() {
         setMedia((product.media || (product.imageUrl ? [{ url: product.imageUrl, type: "image" }] : [])).map((entry: { url: string; type: "image" | "video"; fileName?: string }, index: number) => ({ ...entry, id: `${entry.url}-${index}` })));
       } catch (error) {
         console.error("Product load error:", error);
-        Alert.alert("Could not load product", "Please return to the catalog and try again.", [{ text: "Back", onPress: () => router.back() }]);
+        hadxAlert("Could not load product", "Please return to the catalog and try again.", [{ text: "Back", onPress: () => router.back() }]);
       } finally {
         setLoading(false);
       }
@@ -66,7 +67,7 @@ export default function EditProductScreen() {
   const pickMedia = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Gallery access needed", "Allow gallery access to add photos or videos.");
+      hadxAlert("Gallery access needed", "Allow gallery access to add photos or videos.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], allowsMultipleSelection: true, quality: 1 });
@@ -76,7 +77,7 @@ export default function EditProductScreen() {
   };
   const pickColorMedia = async (index: number) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) { Alert.alert("Gallery access needed", "Allow gallery access to choose color photos and videos."); return; }
+    if (!permission.granted) { hadxAlert("Gallery access needed", "Allow gallery access to choose color photos and videos."); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], allowsMultipleSelection: true, quality: 1 });
     if (result.canceled || !result.assets?.length) return;
     const additions = result.assets.map((asset, assetIndex) => ({ id: `${asset.assetId || asset.uri}-${Date.now()}-${assetIndex}`, uri: asset.uri, type: asset.type === "video" ? "video" as const : "image" as const, mimeType: asset.mimeType, fileName: asset.fileName }));
@@ -93,11 +94,11 @@ export default function EditProductScreen() {
     const sizeMeasurements = Object.fromEntries(selectedSizes.map((size) => [size, { chest: Number(measurementsBySize[size]?.chest) || 0, length: Number(measurementsBySize[size]?.length) || 0, shoulder: Number(measurementsBySize[size]?.shoulder) || 0 }]));
     const stockQuantity = Object.values(sizeStock).reduce((total, value) => total + value, 0);
     if (!form.title.trim() || !form.sku.trim() || !Number.isFinite(usd) || usd <= 0 || !Number.isFinite(pkr) || pkr <= 0 || !Number.isFinite(inr) || inr <= 0 || !Number.isFinite(stockQuantity) || stockQuantity < 0) {
-      Alert.alert("Complete the product board", "Title, SKU, USD, PKR, INR and valid stock are required.");
+      hadxAlert("Complete the product board", "Title, SKU, USD, PKR, INR and valid stock are required.");
       return;
     }
     if (!selectedSizes.length) {
-      Alert.alert("Choose available sizes", "Select at least one size for this product.");
+      hadxAlert("Choose available sizes", "Select at least one size for this product.");
       return;
     }
     const savedStatus = statusOverride ?? form.status;
@@ -125,10 +126,10 @@ export default function EditProductScreen() {
       }
 
       await apiPut(`/products/${id}`, { title: form.title.trim(), sku: form.sku.trim(), price: usd, regionalPrices: { USD: usd, PKR: pkr, INR: inr }, sizes: selectedSizes, media: uploaded, imageUrl: uploaded[0]?.url, description: form.description.trim(), category: form.category.trim(), stockQuantity: Math.floor(stockQuantity), status: savedStatus, stockBySize: sizeStock, measurementsBySize: sizeMeasurements, colorVariants: savedColorVariants, });
-      Alert.alert(savedStatus === "PUBLISHED" ? "Piece is live" : "Piece saved as draft", savedStatus === "PUBLISHED" ? "The product is now visible in your storefront." : "Your catalog changes are saved as a draft.", [{ text: "Done", onPress: () => router.back() }]);
+      hadxAlert(savedStatus === "PUBLISHED" ? "Piece is live" : "Piece saved as draft", savedStatus === "PUBLISHED" ? "The product is now visible in your storefront." : "Your catalog changes are saved as a draft.", [{ text: "Done", onPress: () => router.back() }]);
     } catch (error: any) {
       console.error("Product update error:", error);
-      Alert.alert("Could not update product", error?.response?.data?.error || error?.message || "Please try again.");
+      hadxAlert("Could not update product", error?.response?.data?.error || error?.message || "Please try again.");
     } finally {
       setSaving(false);
     }

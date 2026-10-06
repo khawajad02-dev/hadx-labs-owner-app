@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { hadxAlert } from "@/components/HadxAlert";
 import { router } from "expo-router";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Linking,
   RefreshControl,
@@ -100,7 +100,7 @@ export default function CustomersScreen() {
     try {
       await Linking.openURL(urls[kind]);
     } catch {
-      Alert.alert("Could not open contact", "Please check the customer details and try again.");
+      hadxAlert("Could not open contact", "Please check the customer details and try again.");
     }
   };
 

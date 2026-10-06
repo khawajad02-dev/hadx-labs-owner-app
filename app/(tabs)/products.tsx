@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { hadxAlert } from "@/components/HadxAlert";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   ScrollView,
@@ -125,7 +125,7 @@ export default function ProductsScreen() {
   };
 
   const handleDeleteProduct = (product: Product) => {
-    Alert.alert("Remove this piece?", `${product.title} will be removed from the catalog.`, [
+    hadxAlert("Remove this piece?", `${product.title} will be removed from the catalog.`, [
       { text: "Keep", style: "cancel" },
       {
         text: "Remove",
@@ -136,7 +136,7 @@ export default function ProductsScreen() {
             setProducts((previous) => previous.filter((item) => item.id !== product.id));
             setTotal((previous) => Math.max(0, previous - 1));
           } catch (requestError: any) {
-            Alert.alert("Could not remove", requestError?.response?.data?.error || "Try again when the connection is restored.");
+            hadxAlert("Could not remove", requestError?.response?.data?.error || "Try again when the connection is restored.");
           }
         },
       },
