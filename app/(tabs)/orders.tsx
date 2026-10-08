@@ -18,7 +18,7 @@ import { useColors } from "@/hooks/use-colors";
 import { SensitiveValue } from "@/components/privacy-ui";
 import { usePrivacyStore } from "@/lib/stores/privacy-store";
 import { apiGet, apiPatch, apiPut } from "@/lib/api-client";
-import { filterActiveOrders, filterArchivedOrders } from "@/lib/order-actions";
+import { buildEmailDeliveryUrl, buildWhatsAppDeliveryUrl, filterActiveOrders, filterArchivedOrders } from "@/lib/order-actions";
 
 interface Order {
   id: string;
@@ -132,7 +132,7 @@ export default function OrdersScreen() {
       setLoadingMore(false);
       setRefreshing(false);
     }
-  }, [filter, query, refreshing]);
+  }, [filter, query, refreshing, router]);
 
   useEffect(() => {
     const timer = setTimeout(() => void fetchOrders(false), 220);
@@ -151,12 +151,42 @@ export default function OrdersScreen() {
     void fetchOrders(false);
   };
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  const openDeliveryNotice = async (order: Order, channel: "whatsapp" | "email") => {
+    const url = channel === "whatsapp" ? buildWhatsAppDeliveryUrl(order) : buildEmailDeliveryUrl(order);
+    if (!url) {
+      hadxAlert(channel === "whatsapp" ? "No phone number" : "No email address", `This order has no valid customer ${channel === "whatsapp" ? "phone number" : "email address"}.`);
+      return;
+    }
     try {
-      await apiPut(`/orders/${orderId}`, { orderStatus: newStatus });
+      await Linking.openURL(url);
+    } catch {
+      hadxAlert(`Could not open ${channel === "whatsapp" ? "WhatsApp" : "email"}`, "Please check that a suitable messaging app is installed and try again.");
+    }
+  };
+
+  const promptDeliveryNotice = (order: Order) => {
+    if (!isRevealed) {
+      hadxAlert("Order delivered", "The order is saved in Orders History. Reveal customer details before opening a WhatsApp or email draft.");
+      return;
+    }
+
+    const buttons: { text: string; onPress?: () => void; style?: "default" | "cancel" | "destructive" }[] = [];
+    if (buildWhatsAppDeliveryUrl(order)) buttons.push({ text: "WhatsApp", onPress: () => void openDeliveryNotice(order, "whatsapp") });
+    if (buildEmailDeliveryUrl(order)) buttons.push({ text: "Email", onPress: () => void openDeliveryNotice(order, "email") });
+    if (buttons.length === 0) {
+      hadxAlert("Order delivered", "The order is saved in Orders History, but no customer phone number or email is recorded.");
+      return;
+    }
+    buttons.push({ text: "Not now", style: "cancel" });
+    hadxAlert("Order delivered", "Saved to Orders History. Choose WhatsApp or Email to open a prepared update; review it and press Send in that app.", buttons);
+  };
+
+  const updateOrderStatus = async (order: Order, newStatus: string) => {
+    try {
+      await apiPut(`/orders/${order.id}`, { orderStatus: newStatus });
       await fetchOrders(false);
       if (newStatus === "DELIVERED") {
-        hadxAlert("Order delivered", "The order has been saved and moved to Orders History.");
+        promptDeliveryNotice(order);
       } else if (newStatus === "CANCELLED") {
         hadxAlert("Order cancelled", "The order status has been saved.");
       } else {
@@ -245,9 +275,9 @@ export default function OrdersScreen() {
           <LuxuryButton label="Restore" onPress={() => void setOrderArchived(item, false)} variant="secondary" style={styles.actionButton} />
         ) : (
           <>
-            {item.orderStatus === "RESERVED" ? <LuxuryButton label="Confirm" onPress={() => void updateOrderStatus(item.id, "CONFIRMED")} variant="primary" style={styles.actionButton} /> : null}
-            {item.orderStatus === "CONFIRMED" ? <LuxuryButton label="✓ Delivered" onPress={() => void updateOrderStatus(item.id, "DELIVERED")} variant="primary" style={styles.actionButton} /> : null}
-            {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item.id, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
+            {item.orderStatus === "RESERVED" ? <LuxuryButton label="Confirm" onPress={() => void updateOrderStatus(item, "CONFIRMED")} variant="primary" style={styles.actionButton} /> : null}
+            {item.orderStatus === "CONFIRMED" ? <LuxuryButton label="✓ Delivered" onPress={() => void updateOrderStatus(item, "DELIVERED")} variant="primary" style={styles.actionButton} /> : null}
+            {item.orderStatus !== "CANCELLED" && item.orderStatus !== "EXPIRED" ? <LuxuryButton label="Cancel" onPress={() => void updateOrderStatus(item, "CANCELLED")} variant="danger" style={styles.actionButton} /> : null}
             <LuxuryButton label="WhatsApp" onPress={() => contactWhatsApp(item)} variant="ghost" disabled={!isRevealed} style={styles.actionButton} />
             <LuxuryButton label="Archive" onPress={() => archiveOrder(item)} variant="ghost" style={styles.actionButton} />
           </>
