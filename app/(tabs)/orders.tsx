@@ -154,26 +154,16 @@ export default function OrdersScreen() {
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       await apiPut(`/orders/${orderId}`, { orderStatus: newStatus });
+      await fetchOrders(false);
+      if (newStatus === "DELIVERED") {
+        hadxAlert("Order delivered", "The order has been saved and moved to Orders History.");
+      } else if (newStatus === "CANCELLED") {
+        hadxAlert("Order cancelled", "The order status has been saved.");
+      } else {
+        hadxAlert("Order updated", "The order status has been saved.");
+      }
     } catch (requestError: any) {
-      const statusCode = requestError?.response?.status;
-      if (newStatus !== "DELIVERED" || ![404, 405, 500].includes(statusCode)) {
-        hadxAlert("Could not update order", "Please refresh the order queue and try again.");
-        return;
-      }
-      try {
-        await apiPatch("/orders", { id: orderId, orderStatus: newStatus });
-      } catch (fallbackError: any) {
-        hadxAlert("Could not update order", "The order could not be moved to Delivered. Please refresh and try again.");
-        return;
-      }
-    }
-
-    if (newStatus === "DELIVERED") {
-      setOrders((current) => current.filter((order) => order.id !== orderId));
-      setTotal((current) => Math.max(current - 1, 0));
-      hadxAlert("Order delivered", "The order has been saved and moved to Orders History.");
-    } else {
-      setOrders((current) => current.map((order) => (order.id === orderId ? { ...order, orderStatus: newStatus } : order)));
+      hadxAlert("Could not update order", requestError?.response?.data?.error || "Please refresh the order queue and try again.");
     }
   };
 
@@ -191,8 +181,7 @@ export default function OrdersScreen() {
   const setOrderArchived = async (order: Order, archived: boolean) => {
     try {
       await apiPatch(`/orders/${order.id}`, { archived });
-      setOrders((current) => current.filter((entry) => entry.id !== order.id));
-      setTotal((current) => Math.max(current - 1, 0));
+      await fetchOrders(false);
       hadxAlert(archived ? "Order archived" : "Order restored", archived
         ? "The order is safely retained in Archived and can be restored later."
         : "The order has been returned to the active queue.");
